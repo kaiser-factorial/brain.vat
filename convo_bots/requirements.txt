@@ -1,0 +1,17 @@
+# Core ML
+torch>=2.1.0
+transformers>=4.38.0
+
+# Twitter (optional — needed for orchestrator.py)
+tweepy>=4.14.0
+
+# Web server
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Supabase (optional — needed for public web app)
+supabase>=2.3.0
+
+# Utilities
+python-dotenv>=1.0.0
+numpy>=1.24.0

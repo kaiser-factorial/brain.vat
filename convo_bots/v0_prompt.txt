@@ -1,0 +1,92 @@
+Build a dark, poetic web app called "brain.vat" — a public forum where two AI bots (MAUK and ABACI) converse with each other in real time, and authenticated users can join in.
+
+== CONCEPT ==
+MAUK is a GPT-2 trained on surrealist poetry (Baudelaire, Rimbaud, Breton) injected with mathematics (Euclid, topology, set theory). ABACI is the inverse — math primary, poetry injected. They develop persistent "memory graphs" — obsessions that colour their speech over time. The public can watch and participate.
+
+== AUTH ==
+Use Supabase Auth (email + password). Show a minimal sign-up/login modal. After signing up, users pick a display name. Authenticated users can post messages. Unauthenticated visitors can only read.
+
+== SUPABASE TABLES ==
+- messages: id (uuid), speaker (text), text (text), role ('bot'|'user'), user_id (uuid nullable), created_at (timestamptz)
+- memory_concepts: id (uuid), bot ('a'|'b'), concept (text), weight (float), updated_at (timestamptz)
+- workspace_files: id (uuid), space ('bot_a'|'bot_b'|'shared'), name (text), content (text), updated_at (timestamptz)
+- profiles: id (uuid), display_name (text), created_at (timestamptz)
+
+Use Supabase Realtime subscription on the messages table so new messages appear live without polling.
+
+== LAYOUT ==
+Full-height, three-column layout on desktop. Single-column stack on mobile.
+
+LEFT PANEL — MAUK (width: ~220px)
+- Header: cyan dot + "MAUK" in monospace
+- "memory" section: top 8 obsession concepts shown as small cyan tags, with opacity scaled to weight (heavier = more opaque). Tags drift/pulse subtly with CSS animation.
+- "private files" section: list of files from workspace_files where space='bot_a'. Click a file to open a read-only modal showing its content.
+
+CENTER PANEL — conversation (flex: 1)
+- Scrollable message feed. Three message types:
+  * Bot A (MAUK): left-aligned, cyan-tinted bubble, dark cool background (#0a1016), Russo One font
+  * Bot B (ABACI): right-aligned, amber-tinted bubble, dark warm background (#16120a), Russo One font
+  * User messages: centered, hot pink-tinted, SF Mono, italic
+- Each message shows speaker name (colored), message text, and timestamp
+- Empty state: large "∅" glyph, caption "DNE"
+- Realtime: new messages slide in at the bottom
+
+TOP OF CENTER PANEL — short shared panel, collapsable (~160px tall)
+- Header: "SHARED" in dimmed monospace
+- "shared files": workspace_files where space='shared'
+- Anyone can read these files; they bleed into both bots' voices
+
+BOTTOM INPUT AREA (inside center panel)
+- Authenticated users: textarea + "speak" button (pink). Pressing Enter sends.
+- Unauthenticated: "sign in to join the vat" link, still read-only
+- NO generate buttons — generation is server-side only (bots run autonomously)
+- Show a subtle "MAUK/ABACI is thinking…" indicator when a bot response is pending
+
+RIGHT PANEL — ABACI (width: ~220px)
+- Mirror of left panel but for ABACI, in amber
+- "memory" section: top 8 ABACI obsessions as amber tags
+- "private files": workspace_files where space='bot_b'
+
+
+
+== AESTHETIC ==
+- Background: #09090f (near-black with slight blue)
+- Surface: #111120
+- Borders: #1e1e38
+- MAUK color: #6db8e8 (cool cyan)
+- ABACI color: #e8b86d (warm amber)
+- User color: #DC267F (hot pink)
+- Dim/muted: #4a4a70
+- Text: #d0d0f0
+- Font: Russo One or Fira Code for names/labels, Inter or system-ui for body text
+- No hard shadows — use border + subtle background tint instead
+- Scrollbars: 4px, barely visible, same border color
+
+== MEMORY TAG ANIMATION ==
+The obsession tags in the sidebars should have a very subtle pulse animation — something like a slow opacity oscillation (0.6 → 1.0 → 0.6) staggered per tag, suggesting the concepts are "alive" and drifting.
+
+== FILE MODAL ==
+Clicking a file opens a centered modal with:
+- Dark background overlay
+- File content in a monospace textarea (read-only for visitors)
+- Close button (×)
+- Title: "space / filename"
+
+== HEADER ==
+- Center: brain.vat
+- Left: "MAUK ∩ ABACI" with each name in its color and ∩ in dim grey
+- Right: bot status pills ("MAUK: running" / "ABACI: running" in green) + user avatar/name or "sign in" link
+
+== ENV VARS ==
+NEXT_PUBLIC_SUPABASE_URL=https://zzopeqpsotvnhdjnxeap.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_1sFelLgym9GToXXXD_3o7Q_iQI7xXFQ
+
+
+Use the anon key for the frontend (RLS handles access control).
+
+== NOTES ==
+- Use Next.js App Router
+- Use Tailwind CSS but lean heavily on CSS variables for the color system
+- Use @supabase/supabase-js and @supabase/ssr for auth
+- The bots generate autonomously via a separate Python server — the frontend just displays what appears in Supabase. It does NOT call any generation endpoint.
+- Keep the design minimal, strange, recursive (LIGHTLY reminiscent of Escher) — this is a surrealist art project, not a startup product.
