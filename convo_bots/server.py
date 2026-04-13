@@ -244,32 +244,34 @@ def get_memory(bot: str) -> "MemoryGraph | None":
 
 # ── Dialogue prompt builder ───────────────────────────────────────────────────
 
-def build_dialogue_prompt(history: list[dict], generating_bot: str) -> str:
+def build_dialogue_prompt(history: list[dict], generating_bot: str, memory_concepts: list = None, workspace_files: list = None) -> str:
     """
-    Format conversation history as a structured completion document.
-
-    GPT2 isn't instruction-tuned, so we can't ask it to "respond as X".
-    Instead we build a document it has to *complete*:
-
-        [MAUK]: the moon is an open set
-        [ABACI]: but which topology defines your grief
-        [MAUK]:
-
-    The model fills in after the final `[NAME]:` marker.
-    Key: after generation, strip the prefix and truncate at the next `[`
-    so the model doesn't keep writing the next speaker's turn too.
+    Format conversation history as a structured completion document that aligns 
+    with .txt training data patterns for GPT2 models.
+    
+    This function builds a prompt that matches the format your .txt trained models
+    expect, including memory concepts and file contexts when available.
     """
-    bot_name = BOT_A_NAME if generating_bot == "a" else BOT_B_NAME
-    n        = SETTINGS["context_turns"]
+    # Import the utility functions for enhanced prompt building
+    import sys
+    sys.path.append(str(Path(__file__).parent / "lib"))
+    
+    try:
+        from prompt_utils import build_enhanced_dialogue_prompt
+        return build_enhanced_dialogue_prompt(history, generating_bot, memory_concepts, workspace_files)
+    except ImportError:
+        # Fallback to old behavior if utilities not available
+        bot_name = BOT_A_NAME if generating_bot == "a" else BOT_B_NAME
+        n        = SETTINGS["context_turns"]
 
-    lines = []
-    for msg in history[-n:]:
-        speaker = msg["speaker"]
-        text    = msg["text"].strip().replace("\n", " ")
-        lines.append(f"[{speaker}]: {text}")
+        lines = []
+        for msg in history[-n:]:
+            speaker = msg["speaker"]
+            text    = msg["text"].strip().replace("\n", " ")
+            lines.append(f"[{speaker}]: {text}")
 
-    lines.append(f"[{bot_name}]:")
-    return "\n".join(lines)
+        lines.append(f"[{bot_name}]:")
+        return "\n".join(lines)
 
 
 def strip_dialogue_prefix(text: str, bot_name: str) -> str:
@@ -323,9 +325,19 @@ def generate_response(bot: str, history: list[dict]) -> str:
     if load_status[bot] != "ready":
         return "(model loading...)"
 
-    # Inject memory obsession into prompt
-    mem  = get_memory(bot)
-    prompt = build_dialogue_prompt(history, bot)
+    # Get memory concepts if available
+    mem = get_memory(bot)
+    memory_concepts = None
+    if mem:
+        memory_concepts = [{"bot": bot, "concept": concept} for concept in mem.obsessions(10)]
+    
+    # Get workspace files - in a real implementation, you'd pull these from storage
+    workspace_files = []
+    
+    # Build enhanced prompt with context
+    prompt = build_dialogue_prompt(history, bot, memory_concepts, workspace_files)
+    
+    # Inject memory obsession into prompt (if not already included in enhanced formatting)
     if mem:
         import random
         obsessions = mem.obsessions(5)
@@ -352,12 +364,12 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 top_p=SETTINGS["top_p"],
                 repetition_penalty=SETTINGS["repetition_penalty"],
                 eos_token_id=tokenizers[bot].eos_token_id,
-                pad_token_id=tokenizers[bot].eos_token_id,
+                pad_token_id=tokenizers[bot].pad_token_id,
                 bad_words_ids=bad_words_ids or None,
             )
 
-        new_tokens = output[0][prompt_len:]
-        raw = tokenizers[bot].decode(new_tokens, skip_special_tokens=True).strip()
+        new_tokens=output[0][prompt_len:]
+        raw = tokenizers[bot].decode(new_tokens, skip_special_tokens=True)
         result = strip_dialogue_prefix(raw, bot_name)
 
         # Update memory — let the bot curate what it keeps
@@ -365,9 +377,9 @@ def generate_response(bot: str, history: list[dict]) -> str:
             mem.curate_and_remember(result)
 
         return result or "(silence)"
-
     except Exception as e:
         logging.error(f"Generation error for bot {bot}: {e}")
+        return f"(generation error: {e})"
         return f"(generation error: {e})"
 
 
