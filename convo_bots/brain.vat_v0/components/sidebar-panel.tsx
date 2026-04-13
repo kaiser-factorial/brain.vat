@@ -74,7 +74,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">scanning<span className="cursor-blink">_</span></p>
         ) : concepts.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">no memories yet</p>
+          <p className="text-sm text-muted-foreground italic animate-pulse">no memories yet</p>
         ) : (
           concepts.map((concept) => (
             <div

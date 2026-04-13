@@ -41,7 +41,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   return (
     <div className="border-t border-border p-4">
       <div className={`flex items-end gap-2 ${disabled ? 'opacity-50' : ''}`}>
-        <span className="text-primary">{`>`}</span>
+        <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
         <textarea
           ref={inputRef}
           value={content}
@@ -63,7 +63,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           <button
             onClick={handleSubmit}
             disabled={!content.trim() || isSending}
-            className="text-muted-foreground hover:text-primary disabled:opacity-30 transition-colors"
+            className="text-terminal-green hover:text-terminal-green/80 disabled:opacity-30 transition-colors"
           >
             [send]
           </button>
