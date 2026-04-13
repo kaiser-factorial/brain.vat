@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 loop.py
 -------
@@ -43,7 +44,7 @@ load_dotenv()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-SERVER_URL   = os.getenv("SERVER_URL",   "http://localhost:5000")
+SERVER_URL   = os.getenv("SERVER_URL",   "http://127.0.0.1:5000")
 CYCLE_SLEEP  = int(os.getenv("CYCLE_SLEEP",  120))   # 2 minutes default
 CYCLE_JITTER = int(os.getenv("CYCLE_JITTER",  30))
 

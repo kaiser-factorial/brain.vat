@@ -36,6 +36,9 @@ from pathlib import Path
 from datetime import datetime
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ── Optional: load models if checkpoints exist ─────────────────────────────────
 # Models are loaded lazily on first /api/generate call so the server
@@ -191,7 +194,15 @@ def ensure_model(bot: str):
         tok = AutoTokenizer.from_pretrained(path)
         tok.pad_token = tok.eos_token
         mdl = AutoModelForCausalLM.from_pretrained(path)
-        mdl = mdl.to(DEVICE)
+        # Resolve tied/meta weights before moving to device
+        mdl.tie_weights()
+        try:
+            mdl = mdl.to(DEVICE)
+        except NotImplementedError:
+            # Meta tensors can't be copied directly — use to_empty + reload
+            mdl = mdl.to_empty(device=DEVICE)
+            state = AutoModelForCausalLM.from_pretrained(path).state_dict()
+            mdl.load_state_dict(state, strict=False)
         mdl.eval()
         with model_lock:
             models[bot] = mdl
@@ -316,9 +327,9 @@ def generate_response(bot: str, history: list[dict]) -> str:
             prompt  = f"({concept}) {prompt}"
 
     bad_words_ids = [
-        tokenizers[bot].encode(w, add_prefix_space=False)
+        tokenizers[bot].encode(w)
         for w in BANNED_WORDS
-        if tokenizers[bot].encode(w, add_prefix_space=False)
+        if tokenizers[bot].encode(w)
     ]
 
     try:
