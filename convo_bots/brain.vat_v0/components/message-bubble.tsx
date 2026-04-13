@@ -27,7 +27,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className="message-enter group">
-      <div className="flex items-start gap-2">
+      <div className="flex items-baseline gap-2">
         <span className="text-xs text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity">
           {timestamp}
         </span>
