@@ -20,17 +20,21 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
 
   useEffect(() => {
     const fetchConcepts = async () => {
-      const { data } = await supabase
-        .from('memory_concepts')
-        .select('*')
-        .eq('bot', bot)
-        .order('weight', { ascending: false })
-        .limit(10)
-      
-      if (data) {
-        setConcepts(data)
+      try {
+        const { data, error } = await supabase
+          .from('memory_concepts')
+          .select('*')
+          .eq('bot', bot)
+          .order('weight', { ascending: false })
+          .limit(10)
+        
+        if (error) throw error
+        if (data) setConcepts(data)
+      } catch (err) {
+        console.error('Failed to fetch concepts:', err)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     fetchConcepts()
