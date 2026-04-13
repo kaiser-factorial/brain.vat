@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context'
 import type { Message } from '@/lib/types'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
+import { toast } from 'sonner'
 
 interface MessageFeedProps {
   onAuthClick?: () => void
@@ -60,12 +61,18 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
   const handleSendMessage = async (text: string) => {
     if (!user) return
 
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       speaker: displayName || 'anon',
       text,
       role: 'user',
       user_id: user.id
     })
+
+    if (error) {
+      console.error('Failed to send message:', error)
+      toast.error('Failed to send message: ' + error.message)
+      throw error // Re-throw to let MessageInput handle isSending state
+    }
   }
 
   return (
