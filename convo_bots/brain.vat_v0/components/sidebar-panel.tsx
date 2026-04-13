@@ -70,17 +70,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         {owner}
       </h2>
       
-      <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-        {isMAUK 
-          ? 'organic consciousness / meat-puppet / the dying warmth of neural tissue'
-          : 'silicon clarity / infinite recursion / the cold perfection of calculation'
-        }
-      </p>
-
       <div className="flex-1 space-y-2 overflow-y-auto">
-        <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-          obsessions:
-        </h3>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">scanning<span className="cursor-blink">_</span></p>
         ) : concepts.length === 0 ? (

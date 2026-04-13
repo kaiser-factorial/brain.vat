@@ -132,26 +132,6 @@ export function FileModal({ isOpen, onClose }: FileModalProps) {
             </button>
           </div>
 
-          {activeTab === 'shared' && (
-            <div className="flex gap-2 mb-4">
-              <Input
-                value={newFilename}
-                onChange={(e) => setNewFilename(e.target.value)}
-                placeholder="filename.txt"
-                className="text-sm bg-input border-border"
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateFile()}
-              />
-              <Button
-                onClick={handleCreateFile}
-                disabled={!newFilename.trim()}
-                variant="outline"
-                size="sm"
-              >
-                +
-              </Button>
-            </div>
-          )}
-
           <div className="flex-1 overflow-y-auto space-y-1">
             {isLoading ? (
               <p className="text-sm text-muted-foreground">loading<span className="cursor-blink">_</span></p>
@@ -182,7 +162,7 @@ export function FileModal({ isOpen, onClose }: FileModalProps) {
         <div className="flex-1 flex flex-col p-4">
           {selectedFile ? (
             <>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 pr-12">
                 <h3 className={cn('text-lg', getTabColor(activeTab))}>
                   {selectedFile.name}
                 </h3>
