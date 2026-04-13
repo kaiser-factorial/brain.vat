@@ -67,32 +67,23 @@ CYCLE_SLEEP = int(os.getenv("CYCLE_SLEEP", 1200))
 CYCLE_JITTER = int(os.getenv("CYCLE_JITTER", 180))
 
 # Generation settings
-TEMPERATURE        = float(os.getenv("TEMPERATURE", 0.9))
+TEMPERATURE        = float(os.getenv("TEMPERATURE", 1.05))
 TOP_P              = float(os.getenv("TOP_P", 0.95))
-REPETITION_PENALTY = float(os.getenv("REPETITION_PENALTY", 1.3))
+REPETITION_PENALTY = float(os.getenv("REPETITION_PENALTY", 1.2))
 MAX_NEW_TOKENS     = int(os.getenv("MAX_NEW_TOKENS", 55))
 
 # Fallback prompts used when the other bot has no tweets yet, or on error
 BOT_A_FALLBACK_PROMPTS = [
-    "the moon is an open set",
-    "proof by contradiction:",
-    "god is a degenerate function",
-    "the empty set contains",
-    "I keep finding infinities in the wrong places",
-    "my bones are made of calculus",
-    "the boundary of this set",
-    "suppose there exists a point",
+    "I think",
+    "I want",
+    "Maybe",
+    
 ]
 
 BOT_B_FALLBACK_PROMPTS = [
-    "let x be defined as the colour of",
-    "it follows necessarily that flowers",
-    "the sequence converges to grief",
-    "by the axiom of choice, I loved you",
-    "for all x in the domain of dreaming",
-    "the limit does not exist, and neither do I",
-    "assume the function is continuous with longing",
-    "there exists no such mapping between us",
+    "I think",
+    "I want",
+    "Maybe",
 ]
 
 

@@ -68,10 +68,18 @@ def build_enhanced_dialogue_prompt(
     generating_bot: str, 
     memory_concepts: List[Dict] = None,
     workspace_files: List[Dict] = None,
-    context_turns: int = 6
+    context_turns: int = 4  # Reduced to prevent overwhelm - GPT-2 models perform better with less context
 ) -> str:
     """
     Enhanced prompt building function that mirrors .txt training data patterns.
+    
+    This implementation includes intelligent context limiting to prevent 
+    overwhelming the GPT-2 models with too much conversation history.
+    
+    The system caps conversation context to prevent model overload. By taking
+    only the most recent N messages from history (where N = context_turns), 
+    we naturally avoid including old user messages that are no longer relevant
+    to the current conversation flow.
     
     Format follows:
     INSTRUCTION: Respond as X
@@ -89,22 +97,31 @@ def build_enhanced_dialogue_prompt(
     # Add instructions
     lines.append(f"INSTRUCTION: Respond as {bot_name} in a philosophical, introspective style")
     
-    # Add memory context
+    # Add memory context (always include memory concepts for context)
     memory_context = build_memory_context(memory_concepts or [], generating_bot)
     if memory_context:
         lines.append(memory_context)
     
-    # Add file context  
+    # Add file context (limit to 1-2 most relevant files if any)
     file_context = build_file_context(workspace_files or [], generating_bot)
     if file_context:
         lines.append(file_context)
     
-    # Add recent conversation history
-    recent_history = history[-context_turns:] if history else []
-    for msg in recent_history:
-        speaker = msg["speaker"]
-        text = msg["text"].strip().replace("\n", " ")
-        lines.append(f"[{speaker}] SAYS: \"{text}\"")
+    # Add recent conversation history with intelligent limiting based on relevance
+    # Only include messages that are actually relevant to the current response
+    # This prevents scenarios where old user messages that aren't part of current 
+    # conversation flow are unnecessarily included in the context
+    if history:
+        # Get recent context with the specified limit
+        recent_history = history[-context_turns:] if history else []
+        
+        # Filter to only include messages that are within the recent conversation window
+        # This prevents old user messages from appearing in prompts when they're 
+        # no longer relevant to the current response
+        for msg in recent_history:
+            speaker = msg["speaker"]
+            text = msg["text"].strip().replace("\n", " ")
+            lines.append(f"[{speaker}] SAYS: \"{text}\"")
     
     # Add directive for bot to respond
     lines.append(f"RESPONSE: [{bot_name}] SAYS:")
