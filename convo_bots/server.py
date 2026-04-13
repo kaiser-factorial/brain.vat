@@ -180,11 +180,14 @@ def ensure_model(bot: str):
         if load_status[bot] == "loading":
             return False
 
-        path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
-        if not Path(path).exists():
-            print(f"[server] Checkpoint not found at {path} — bot {bot} in demo mode")
-            load_status[bot] = "demo"
-            return False
+    path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
+    # Ensure the path is valid for loading (not relative path that looks like repo name)
+    import os
+    abs_path = os.path.abspath(path)
+    if not os.path.exists(abs_path):
+        print(f"[server] Checkpoint not found at {abs_path} (from {path}) — bot {bot} in demo mode")
+        load_status[bot] = "demo"
+        return False
 
         load_status[bot] = "loading"
 
@@ -196,13 +199,21 @@ def ensure_model(bot: str):
         mdl = AutoModelForCausalLM.from_pretrained(path)
         # Resolve tied/meta weights before moving to device
         mdl.tie_weights()
-        try:
-            mdl = mdl.to(DEVICE)
-        except NotImplementedError:
-            # Meta tensors can't be copied directly — use to_empty + reload
-            mdl = mdl.to_empty(device=DEVICE)
-            state = AutoModelForCausalLM.from_pretrained(path).state_dict()
-            mdl.load_state_dict(state, strict=False)
+        
+        # Handle Apple Silicon device loading properly
+        if DEVICE.type == "mps":
+            # Workaround for meta tensors on MPS - load directly to proper device
+            print(f"[server] Loading model on MPS device with special handling for Apple Silicon...")
+            # Load model directly with device parameter
+            mdl = AutoModelForCausalLM.from_pretrained(path, device_map="auto", torch_dtype=torch.float32)
+        else:
+            try:
+                mdl = mdl.to(DEVICE)
+            except NotImplementedError:
+                # Meta tensors can't be copied directly — use to_empty + reload
+                mdl = mdl.to_empty(device=DEVICE)
+                state = AutoModelForCausalLM.from_pretrained(path).state_dict()
+                mdl.load_state_dict(state, strict=False)
         mdl.eval()
         with model_lock:
             models[bot] = mdl
@@ -258,9 +269,13 @@ def build_dialogue_prompt(history: list[dict], generating_bot: str, memory_conce
     
     try:
         from prompt_utils import build_enhanced_dialogue_prompt
-        return build_enhanced_dialogue_prompt(history, generating_bot, memory_concepts, workspace_files)
-    except ImportError:
+        result = build_enhanced_dialogue_prompt(history, generating_bot, memory_concepts, workspace_files)
+        # Debug: Print that we're using the enhanced prompt
+        # print(f"[DEBUG] Using enhanced prompt builder")
+        return result
+    except ImportError as e:
         # Fallback to old behavior if utilities not available
+        # print(f"[DEBUG] Falling back to old prompt builder due to {e}")
         bot_name = BOT_A_NAME if generating_bot == "a" else BOT_B_NAME
         n        = SETTINGS["context_turns"]
 
