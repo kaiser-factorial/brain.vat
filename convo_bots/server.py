@@ -223,16 +223,23 @@ memory = {"a": None, "b": None}
 def get_memory(bot: str) -> "MemoryGraph | None":
     if not MEMORY_AVAILABLE:
         return None
+    
+    mdl = models.get(bot)
+    tok = tokenizers.get(bot)
+
     if memory[bot] is None:
         name  = BOT_A_NAME if bot == "a" else BOT_B_NAME
         path  = str(MEMORY_DIR / f"memory_{bot}.json")
-        # Pass model + tokenizer if loaded so the bot can curate its own memory
-        mdl = models.get(bot)
-        tok = tokenizers.get(bot)
         memory[bot] = MemoryGraph(
             path, bot_name=name, bot_key=bot,
             model=mdl, tokenizer=tok, device=DEVICE,
         )
+    else:
+        # Hot-reload models into memory graph if they finished loading
+        if memory[bot].model is None and mdl is not None:
+            memory[bot].model = mdl
+            memory[bot].tokenizer = tok
+            
     return memory[bot]
 
 # ── Dialogue prompt builder ───────────────────────────────────────────────────

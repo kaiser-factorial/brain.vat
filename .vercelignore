@@ -1,0 +1,7 @@
+model_checkpoint_mauk_1
+model_checkpoint_abaci_1
+convo_bots/venv
+backups
+training
+.git
+.DS_Store

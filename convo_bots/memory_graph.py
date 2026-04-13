@@ -182,7 +182,11 @@ class MemoryGraph:
 
         self._prune()
         self._save()
-        self._sync_supabase()
+        
+        # Two-tiered sync
+        self._sync_archive(added)   # Long-term subconscious
+        self._sync_supabase()       # Short-term active tier
+        
         return added
 
     def obsessions(self, n: int = 10) -> list[str]:
@@ -309,23 +313,46 @@ class MemoryGraph:
         self._cooccur  = data.get("cooccur",  {})
 
     def _sync_supabase(self):
-        """Push top concepts to Supabase memory_concepts table (if connected)."""
+        """Push decaying concepts to 'memory_concepts' for the active UI tier."""
         sb = _supabase()
         if sb is None:
             return
         try:
+            # 1. Clear existing active concepts for this bot
+            sb.table("memory_concepts").delete().eq("bot", self.bot_key).execute()
+
+            # 2. Prepare new rows
             rows = [
                 {"bot": self.bot_key, "concept": c, "weight": round(w, 4)}
                 for c, w in self._concepts.items()
             ]
-            # Upsert in batches of 50
-            for i in range(0, len(rows), 50):
-                sb.table("memory_concepts").upsert(
-                    rows[i:i+50],
-                    on_conflict="bot,concept"
-                ).execute()
+            
+            # 3. Insert in batches of 50
+            if rows:
+                for i in range(0, len(rows), 50):
+                    sb.table("memory_concepts").insert(rows[i:i+50]).execute()
+                log.info(f"[{self.bot_name}] Active tier synced ({len(rows)} concepts)")
         except Exception as e:
-            log.warning(f"Supabase memory sync failed: {e}")
+            log.warning(f"[{self.bot_name}] Active sync failed: {e}")
+
+    def _sync_archive(self, phrases: list[str]):
+        """Persistently archive new concepts into 'memory_archive'."""
+        sb = _supabase()
+        if sb is None or not phrases:
+            return
+        try:
+            for phrase in phrases:
+                # Upsert to track the last time this concept was thought of.
+                # Requires UNIQUE (bot, concept) constraint.
+                sb.table("memory_archive").upsert({
+                    "bot": self.bot_key,
+                    "concept": phrase,
+                    "last_thought_at": datetime.utcnow().isoformat()
+                }, on_conflict="bot,concept").execute()
+            log.info(f"[{self.bot_name}] Archived {len(phrases)} concepts")
+        except Exception as e:
+            # Archive failure is usually due to the table/constraint not existing yet
+            log.debug(f"[{self.bot_name}] Archive sync withheld: {e}")
 
 
 # ── Standalone demo ────────────────────────────────────────────────────────────
