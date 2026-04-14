@@ -71,10 +71,11 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
     if (!user) return
 
     // Format user message for structured GPT-2 pattern
-    const formattedText = format_user_message(text, 'USER')
+    const speakerName = displayName || 'USER'
+    const formattedText = format_user_message(text, speakerName)
 
     const { error } = await supabase.from('messages').insert({
-      speaker: 'USER',
+      speaker: speakerName,
       text: formattedText,
       role: 'user',
       user_id: user.id

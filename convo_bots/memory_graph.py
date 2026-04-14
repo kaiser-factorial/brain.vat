@@ -67,9 +67,14 @@ _EXTRA_STOP = {
     "people", "really", "going", "something", "actually", "probably",
     "maybe", "already", "still", "also", "much", "many", "every",
     "never", "always", "together", "between", "because", "being",
+    "mauk", "abaci", "airport", "went", "straight", "about", "could",
+    "would", "should", "there", "their", "where", "which",
+    "people", "really", "going", "something", "actually", "probably",
+    "maybe", "already", "still", "also", "much", "many", "every",
+    "never", "always", "together", "between", "because", "being",
     "nothing", "everything", "anything", "someone", "anyone",
+    "thing", "things", "want", "make", "made", "just", "know", "think",
 }
-
 _STOP = {
     "i", "a", "the", "and", "or", "but", "in", "on", "at", "to",
     "is", "it", "of", "my", "your", "just", "that", "this", "for",
@@ -79,6 +84,7 @@ _STOP = {
     "can", "been", "which", "there", "their", "from", "all", "one",
     "are", "into", "more", "out", "up", "what", "when", "than", "then",
     "like", "only", "any", "now", "about", "some", "time", "very",
+    "from", "have", "been", "through", "would", "should",
 } | _EXTRA_STOP
 
 
@@ -234,17 +240,16 @@ class MemoryGraph:
     # ── Curation pass ──────────────────────────────────────────────────────────
 
     def _curation_pass(self, generated_text: str, max_new_tokens: int = 12) -> str | None:
-        """Second-pass generation: ask the model what it 'remembers'.
-
+        """Second-pass generation: ask the model for the 'abstract essence'.
+        
         Prompt format:
             [MAUK]: the moon is an open set.
-            [MAUK] remembers:
-
-        Parse the first meaningful phrase from the completion.
+            The unseen concept here is:
         """
         try:
             import torch
-            prompt = f"[{self.bot_name}]: {generated_text.strip()}\n[{self.bot_name}] remembers:"
+            # Using a more "intellectual" lead-in to nudge away from slop
+            prompt = f"[{self.bot_name}]: {generated_text.strip()}\nThe unseen concept here is:"
             inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
             with torch.no_grad():

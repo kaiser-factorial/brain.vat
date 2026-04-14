@@ -8,7 +8,7 @@ from typing import List, Dict
 # Get configuration from environment
 BOT_A_NAME = os.getenv("BOT_A_NAME", "MAUK")
 BOT_B_NAME = os.getenv("BOT_B_NAME", "ABACI")
-USER_NAME = os.getenv("USER_NAME", "CORINA")
+USER_NAME = os.getenv("USER_NAME", "brick.factorial")
 
 def format_message(speaker: str, text: str) -> str:
     """Barebones dialogue format: [NAME]: TEXT"""

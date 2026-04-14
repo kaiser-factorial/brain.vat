@@ -42,7 +42,7 @@ export function parse_message_for_frontend_display(text: string): ParsedMessage 
   }
   
   // 2. Match standard [SPEAKER]: Text (Barebones training format)
-  const dialoguePattern = /^\[([A-Z0-9_-]+)\]:\s*(.+)$/i;
+  const dialoguePattern = /^\[([A-Z0-9_.-]+)\]:\s*(.+)$/i;
   const dialogueMatch = trimmed.match(dialoguePattern);
   if (dialogueMatch) {
     return {

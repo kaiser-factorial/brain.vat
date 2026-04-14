@@ -266,7 +266,7 @@ def main():
             
         # ── RANDOMIZED THINKING DELAY ─────────────────────────────
         # Instead of a fixed pause, we wait between 20s and 120s
-        jitter = random.randint(20, 45)
+        jitter = random.randint(10, 30)
         wake_at = datetime.fromtimestamp(time.time() + jitter).strftime("%H:%M:%S")
         log.info(f"Next turn in {jitter}s (at {wake_at})...")
 

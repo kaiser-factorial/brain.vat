@@ -31,7 +31,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select('display_name')
           .eq('id', user.id)
           .single()
-        setDisplayName(profile?.display_name || null)
+        
+        const finalName = profile?.display_name || null
+        setDisplayName(finalName)
+
+        // Metadata Sync: Force update if browser metadata is stuck on CORINA
+        if (finalName === 'brick.factorial' && user.user_metadata?.display_name !== 'brick.factorial') {
+          console.log('[Auth] Syncing metadata to brick.factorial...')
+          await supabase.auth.updateUser({
+            data: { display_name: 'brick.factorial' }
+          })
+        }
       }
       setIsLoading(false)
     }

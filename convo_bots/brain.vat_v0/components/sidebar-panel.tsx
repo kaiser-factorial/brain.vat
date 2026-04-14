@@ -12,6 +12,7 @@ interface SidebarPanelProps {
 
 export function SidebarPanel({ owner, side }: SidebarPanelProps) {
   const [concepts, setConcepts] = useState<MemoryConcept[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
 
@@ -28,10 +29,19 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
           .order('weight', { ascending: false })
           .limit(10)
         
-        if (error) throw error
-        if (data) setConcepts(data)
+        if (error) {
+          setError(error.message)
+          throw error
+        }
+        
+        if (data) {
+          setConcepts(data)
+          setError(null)
+        }
       } catch (err: any) {
-        console.error('Failed to fetch concepts for bot:', bot, err?.message || err)
+        const msg = err?.message || JSON.stringify(err)
+        console.error(`[Sidebar] Failed for ${owner} (${bot}):`, msg)
+        setError(msg)
       } finally {
         setIsLoading(false)
       }
@@ -77,6 +87,10 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
       <div className="flex-1 space-y-2 overflow-y-auto">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">scanning<span className="cursor-blink">_</span></p>
+        ) : error ? (
+          <div className="text-xs text-red-900 bg-red-950/20 p-2 border border-red-900/50">
+            ERR: {error}
+          </div>
         ) : concepts.length === 0 ? (
           <p className="text-sm text-muted-foreground italic animate-pulse">no memories yet</p>
         ) : (

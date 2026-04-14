@@ -47,10 +47,13 @@ export function Header({ onAuthClick }: HeaderProps) {
                 {user ? (
                   <>
                     <span className="text-sm text-terminal-green">
-                      {displayName || 'anon'}
+                      {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
                     </span>
                     <button
-                      onClick={signOut}
+                      onClick={async () => {
+                        await signOut()
+                        window.location.href = '/'
+                      }}
                       className="text-sm text-primary hover:text-primary/80 transition-colors"
                     >
                       [exit]

@@ -68,13 +68,14 @@ MODEL_B_PATH  = os.getenv("MODEL_B_PATH", str(BASE_DIR.parent / "model_checkpoin
 
 BOT_A_NAME = os.getenv("BOT_A_NAME", "MAUK")
 BOT_B_NAME = os.getenv("BOT_B_NAME", "ABACI")
-USER_NAME  = os.getenv("USER_NAME",  "CORINA")
+USER_NAME  = os.getenv("USER_NAME",  "brick.factorial")
 
 SETTINGS = {
-    "temperature":        0.70,
-    "top_p":              0.95,
-    "repetition_penalty": 1.30,
-    "max_new_tokens":     60,
+    "temperature_a":      float(os.getenv("TEMPERATURE_A", 0.95)),
+    "temperature_b":      float(os.getenv("TEMPERATURE_B", 1.25)),
+    "top_p":              float(os.getenv("TOP_P", 0.95)),
+    "repetition_penalty": float(os.getenv("REPETITION_PENALTY", 1.30)),
+    "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS", 60)),
 }
 
 # ── Device Setup ─────────────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 **inputs,
                 max_new_tokens=SETTINGS["max_new_tokens"],
                 do_sample=True,
-                temperature=SETTINGS["temperature"],
+                temperature=SETTINGS["temperature_a"] if bot == "a" else SETTINGS["temperature_b"],
                 top_p=SETTINGS["top_p"],
                 repetition_penalty=SETTINGS["repetition_penalty"],
                 eos_token_id=tokenizers[bot].eos_token_id,

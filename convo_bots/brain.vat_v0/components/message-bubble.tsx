@@ -22,8 +22,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const parsedSpeaker = parsed.speaker || ''
   
   // Normalize speaker name (MAUK, ABACI, USER)
-  const rawName = (dbSpeaker || parsedSpeaker || 'UNKNOWN').toUpperCase()
-  const speaker = rawName === 'CORINA' ? 'USER' : rawName
+  let speaker = (dbSpeaker || parsedSpeaker || 'UNKNOWN').toUpperCase()
+
+  // HARD OVERRIDE: Final safety net for the 'Corina' ghost
+  if (speaker === 'CORINA') {
+    speaker = 'BRICK.FACTORIAL'
+  }
 
   const getSpeakerStyle = () => {
     switch (speaker) {
@@ -31,10 +35,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         return 'text-mauk'
       case 'ABACI':
         return 'text-abaci'
-      case 'USER':
-        return 'text-user'
       default:
-        return 'text-muted-foreground italic'
+        return 'text-user' // blood red for brick.factorial / user
     }
   }
 
@@ -46,7 +48,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         </span>
         <div className="flex-1">
           <span className={cn('text-sm font-mono lowercase', getSpeakerStyle())}>
-            {speaker === 'USER' ? 'corina' : speaker.toLowerCase()}:
+            {speaker.toLowerCase()}:
           </span>
           <span className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
             {parsed.text}
