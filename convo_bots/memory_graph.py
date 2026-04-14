@@ -166,34 +166,7 @@ class MemoryGraph:
         else:
             phrases = _extract_salient_phrases(generated_text)
 
-        return self.remember_phrases(phrases)
-
-    def remember_phrases(self, phrases: list[str]) -> list[str]:
-        """Add a list of phrases to memory. Returns those actually stored."""
-        added = []
-        self._decay_all()
-
-        for phrase in phrases:
-            if not phrase:
-                continue
-            prev = self._concepts.get(phrase, 0.0)
-            self._concepts[phrase] = min(prev + 1.0, 20.0)
-            added.append(phrase)
-
-        # Co-occurrence edges
-        for i, p1 in enumerate(phrases):
-            for p2 in phrases[i + 1:]:
-                key = "__".join(sorted([p1, p2]))
-                self._cooccur[key] = self._cooccur.get(key, 0.0) + 1.0
-
-        self._prune()
-        self._save()
-        
-        # Two-tiered sync
-        self._sync_archive(added)   # Long-term subconscious
-        self._sync_supabase()       # Short-term active tier
-        
-        return added
+        return self.remember_phrases(phrases, source_text=generated_text)
 
     def obsessions(self, n: int = 10) -> list[str]:
         """Return the n highest-weight concepts."""
@@ -340,21 +313,22 @@ class MemoryGraph:
         except Exception as e:
             log.warning(f"[{self.bot_name}] Active sync failed: {e}")
 
-    def _sync_archive(self, phrases: list[str]):
-        """Persistently archive new concepts into 'memory_archive'."""
+    def _sync_archive(self, phrases: list[str], source_text: str = ""):
+        """Persistently archive new concepts into 'memory_archive' with origin context."""
         sb = _supabase()
         if sb is None or not phrases:
             return
         try:
             for phrase in phrases:
                 # Upsert to track the last time this concept was thought of.
-                # Requires UNIQUE (bot, concept) constraint.
+                # Now including source_text for traceability!
                 sb.table("memory_archive").upsert({
                     "bot": self.bot_key,
                     "concept": phrase,
+                    "source_text": source_text,
                     "last_thought_at": datetime.utcnow().isoformat()
                 }, on_conflict="bot,concept").execute()
-            log.info(f"[{self.bot_name}] Archived {len(phrases)} concepts")
+            log.info(f"[{self.bot_name}] Archived {len(phrases)} concepts with provenance")
         except Exception as e:
             # Archive failure is usually due to the table/constraint not existing yet
             log.debug(f"[{self.bot_name}] Archive sync withheld: {e}")

@@ -193,7 +193,15 @@ CORS(app)
 
 @app.route("/api/status")
 def get_status():
-    return jsonify({"status": "online", "load_status": load_status})
+    return jsonify({
+        "status": "online", 
+        "load_status": load_status,
+        "settings": SETTINGS,
+        "names": {
+            "a": BOT_A_NAME,
+            "b": BOT_B_NAME
+        }
+    })
 
 @app.route("/api/generate/<bot>", methods=["POST"])
 def generate(bot):
@@ -237,6 +245,44 @@ def generate(bot):
         threading.Thread(target=curate_task, args=(text, memory_graphs[bot]), daemon=True).start()
 
     return jsonify({"speaker": bot_name, "text": text})
+
+@app.route("/api/memory/source/<bot>/<concept>")
+def get_memory_source(bot, concept):
+    """Fetch the original dialogue that created a specific concept."""
+    if bot not in ("a", "b"): abort(400)
+    if not SUPABASE_UTILS_AVAILABLE or not sb_client:
+        return jsonify({"source_text": "(Source unavailable — offline mode)"})
+    
+    try:
+        # Fetch from the persistent archive
+        res = sb_client.table("memory_archive") \
+            .select("source_text") \
+            .eq("bot", bot) \
+            .eq("concept", concept) \
+            .execute()
+        
+        if res.data and res.data[0].get("source_text"):
+            return jsonify({"source_text": res.data[0]["source_text"]})
+        return jsonify({"source_text": "(Context lost to time)"})
+    except Exception as e:
+        logging.error(f"Failed to fetch memory source: {e}")
+        return jsonify({"source_text": "(Error retrieving context)"})
+
+@app.route("/api/memory/archive")
+def get_memory_archive():
+    """Fetch the full historical memory archive for both bots."""
+    if not SUPABASE_UTILS_AVAILABLE or not sb_client:
+        return jsonify([])
+    
+    try:
+        res = sb_client.table("memory_archive") \
+            .select("*") \
+            .order("last_thought_at", desc=True) \
+            .execute()
+        return jsonify(res.data or [])
+    except Exception as e:
+        logging.error(f"Failed to fetch archive: {e}")
+        return jsonify([])
 
 if __name__ == "__main__":
     # Auto-prime models in background to break the wait-loop with loop.py

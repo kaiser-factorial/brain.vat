@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { FileModal } from './file-modal'
 import Link from 'next/link'
+import { StabilityVitals } from './stability-vitals'
 
 interface HeaderProps {
   onAuthClick?: () => void
@@ -28,9 +29,15 @@ export function Header({ onAuthClick }: HeaderProps) {
                 [about]
               </span>
             </Link>
+            <Link href="/archive">
+              <span className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer">
+                [archive]
+              </span>
+            </Link>
           </div>
 
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <StabilityVitals />
             {!isLoading && user && (
               <button
                 onClick={() => setShowFiles(true)}
