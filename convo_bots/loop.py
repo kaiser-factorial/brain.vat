@@ -89,7 +89,9 @@ def bot_status(bot: str) -> str:
     try:
         r = requests.get(f"{SERVER_URL}/api/status", timeout=5)
         if r.ok:
-            return r.json()["bots"][bot]["status"]
+            # Match the new server response format: {"load_status": {"a": "ready", ...}}
+            data = r.json()
+            return data.get("load_status", {}).get(bot, "unknown")
     except Exception:
         pass
     return "unknown"
@@ -109,7 +111,8 @@ def trigger_generate(bot: str, dry_run: bool = False) -> dict | None:
 
     try:
         log.info(f"Triggering {bot_name} ...")
-        r = requests.post(url, timeout=120)   # generation can take a moment on CPU
+        # Explicitly send JSON to avoid 415 Unsupported Media Type error
+        r = requests.post(url, json={"history": []}, timeout=120)
         if r.ok:
             msg = r.json()
             log.info(f"[{bot_name}] → \"{msg.get('text', '')}\"")

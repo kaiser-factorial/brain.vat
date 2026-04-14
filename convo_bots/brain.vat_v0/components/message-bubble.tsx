@@ -28,11 +28,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const getSpeakerStyle = () => {
     switch (speaker) {
       case 'MAUK':
-        return 'text-mauk mauk-glow underline decoration-mauk/20'
+        return 'text-mauk'
       case 'ABACI':
-        return 'text-abaci abaci-glow underline decoration-abaci/20'
+        return 'text-abaci'
       case 'USER':
-        return 'text-user font-bold'
+        return 'text-user'
       default:
         return 'text-muted-foreground italic'
     }
@@ -45,8 +45,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {timestamp}
         </span>
         <div className="flex-1">
-          <span className={cn('text-xs font-bold tracking-tighter uppercase', getSpeakerStyle())}>
-            [{speaker}]
+          <span className={cn('text-sm font-mono lowercase', getSpeakerStyle())}>
+            {speaker === 'USER' ? 'corina' : speaker.toLowerCase()}:
           </span>
           <span className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
             {parsed.text}
