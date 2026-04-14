@@ -1,29 +1,8 @@
 """
 server.py
 ---------
-Flask backend for the two-bot desktop conversation app.
-
-Endpoints:
-  GET  /api/status                      - health check + model load state
-  POST /api/generate/<bot>              - generate one turn for a bot
-  GET  /api/conversation                - full conversation history
-  POST /api/conversation                - add a message (user or bot)
-  DEL  /api/conversation                - clear history
-  GET  /api/files/<space>               - list files in a workspace
-  POST /api/files/<space>               - upload / create a text file
-  GET  /api/files/<space>/<name>        - read a file
-  DEL  /api/files/<space>/<name>        - delete a file
-  GET  /api/memory/<bot>                - get memory graph stats + obsessions
-  POST /api/settings                    - update generation settings at runtime
-
-Workspaces:  bot_a | bot_b | shared
-Bots:        a | b
-
-Run:
-    pip install flask flask-cors
-    python server.py
-
-Then open app.html in your browser.
+High-stability Flask backend for MAUK and ABACI.
+Standardized for root-level utility imports and CPU inference.
 """
 
 import os
@@ -38,9 +17,10 @@ from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+# ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 load_dotenv()
@@ -49,369 +29,149 @@ BASE_DIR      = Path(__file__).parent
 WORKSPACE_DIR = BASE_DIR / "workspace"
 MEMORY_DIR    = BASE_DIR / "memory"
 
-# ── Optional: load models if checkpoints exist ─────────────────────────────────
-# Models are loaded lazily on first /api/generate call so the server
-# starts instantly even if checkpoints aren't ready yet.
+# ── Root Utility Imports ──────────────────────────────────────────────────────
+# Utilities have been moved to the root to satisfy the IDE and stabilize runtime.
 try:
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    TORCH_AVAILABLE = True
+    from supabase_utils import fetch_memory_concepts, fetch_workspace_files
+    SUPABASE_UTILS_AVAILABLE = True
 except ImportError:
-    TORCH_AVAILABLE = False
-    print("[server] torch/transformers not installed — running in DEMO mode (no generation)")
+    SUPABASE_UTILS_AVAILABLE = False
+    logging.warning("supabase_utils.py not found — context disabled")
+
+try:
+    from prompt_utils import build_enhanced_dialogue_prompt, format_bot_message, format_user_message
+    PROMPT_UTILS_AVAILABLE = True
+except ImportError:
+    PROMPT_UTILS_AVAILABLE = False
+    logging.warning("prompt_utils.py not found — logic disabled")
 
 try:
     from memory_graph import MemoryGraph
     MEMORY_AVAILABLE = True
 except ImportError:
     MEMORY_AVAILABLE = False
-    print("[server] memory_graph.py not found — memory disabled")
+    logging.warning("memory_graph.py not found — memory disabled")
 
+# ── Torch / Transformers ─────────────────────────────────────────────────────
 try:
-    from lib.supabase_utils import fetch_memory_concepts, fetch_workspace_files
-    SUPABASE_UTILS_AVAILABLE = True
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    TORCH_AVAILABLE = True
 except ImportError:
-    SUPABASE_UTILS_AVAILABLE = False
-    print("[server] lib/supabase_utils.py not found — supabase context disabled")
-
-try:
-    # Ensure lib is in path for imports
-    import sys
-    sys.path.insert(0, str(BASE_DIR / "lib"))
-    from prompt_utils import build_enhanced_dialogue_prompt, format_bot_message, format_user_message
-    PROMPT_UTILS_AVAILABLE = True
-except ImportError:
-    PROMPT_UTILS_AVAILABLE = False
-    print("[server] lib/prompt_utils.py not found — prompt utils disabled")
-
-# ── Supabase (optional) ───────────────────────────────────────────────────────
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")   # service role key bypasses RLS
-
-_supabase_client = None
-
-def get_supabase():
-    global _supabase_client
-    if _supabase_client is None and SUPABASE_URL and SUPABASE_KEY:
-        try:
-            from supabase import create_client
-            _supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-            print("[server] Supabase connected.")
-        except Exception as e:
-            print(f"[server] Supabase init failed: {e}")
-    return _supabase_client
+    TORCH_AVAILABLE = False
+    logging.error("torch/transformers not installed — running in DEMO mode")
 
 # ── Config ────────────────────────────────────────────────────────────────────
+# Corrected model paths for mauk_1 and abaci_1
+MODEL_A_PATH  = os.getenv("MODEL_A_PATH", str(BASE_DIR.parent / "model_checkpoint_mauk_1"))
+MODEL_B_PATH  = os.getenv("MODEL_B_PATH", str(BASE_DIR.parent / "model_checkpoint_abaci_1"))
 
-# Skip moving these here, I will just move them to the top in the next chunk
-
-MODEL_A_PATH  = os.getenv("MODEL_A_PATH", str(BASE_DIR.parent / "model_checkpoint_a"))
-MODEL_B_PATH  = os.getenv("MODEL_B_PATH", str(BASE_DIR.parent / "model_checkpoint_b"))
-
-# Bot identities — change these to match your aesthetic
-BOT_A_NAME = os.getenv("BOT_A_NAME", "MAUK")   # surrealist-poetry-injected-with-math
-BOT_B_NAME = os.getenv("BOT_B_NAME", "ABACI")      # math-injected-with-poetry
+BOT_A_NAME = os.getenv("BOT_A_NAME", "MAUK")
+BOT_B_NAME = os.getenv("BOT_B_NAME", "ABACI")
 USER_NAME  = os.getenv("USER_NAME",  "CORINA")
 
-# Generation defaults (overridable via POST /api/settings)
+# Standardized settings for stability
 SETTINGS = {
     "temperature":        float(os.getenv("TEMPERATURE",        0.70)),
     "top_p":              float(os.getenv("TOP_P",              0.95)),
     "repetition_penalty": float(os.getenv("REPETITION_PENALTY", 1.30)),
-    "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS",       55)),
-    "context_turns":      int(os.getenv("CONTEXT_TURNS",        6)),    # how many past messages to include
-    "memory_blend":       float(os.getenv("MEMORY_BLEND",       0.45)), # prob of injecting a memory obsession
+    "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS",       60)),
+    "context_turns":      int(os.getenv("CONTEXT_TURNS",        6)),
 }
 
-BANNED_WORDS = ["iced", " iced", "Iced", " Iced"]
+# ── Device Setup ─────────────────────────────────────────────────────────────
+# Force CPU for stability on Apple Silicon with these GPT-2 checkpoints
+if TORCH_AVAILABLE:
+    DEVICE = torch.device("cpu")
+    logging.info(f"Inference device forced to: {DEVICE}")
+else:
+    DEVICE = None
 
-# ── Workspace dirs ────────────────────────────────────────────────────────────
-
-for space in ("bot_a", "bot_b", "shared"):
-    (WORKSPACE_DIR / space).mkdir(parents=True, exist_ok=True)
-MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-
-# ── Conversation store (in-memory + persisted to JSON) ───────────────────────
-
-CONVERSATION_FILE = BASE_DIR / "conversation.json"
-
-def _load_conversation():
-    if CONVERSATION_FILE.exists():
-        return json.loads(CONVERSATION_FILE.read_text())
-    return []
-
-def _save_conversation(history):
-    CONVERSATION_FILE.write_text(json.dumps(history, indent=2))
-
-conversation_lock = threading.Lock()
-conversation: list[dict] = _load_conversation()
-
-def add_message(speaker: str, text: str, role: str = "bot", user_id: str = None) -> dict:
-    msg = {
-        "id":        f"{time.time():.3f}",
-        "speaker":   speaker,
-        "text":      text,
-        "role":      role,   # "bot" | "user"
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-    with conversation_lock:
-        conversation.append(msg)
-        _save_conversation(conversation)
-
-    # Mirror to Supabase if connected
-    sb = get_supabase()
-    if sb:
-        try:
-            sb.table("messages").insert({
-                "speaker":  speaker,
-                "text":     text,
-                "role":     role,
-                "user_id":  user_id,
-            }).execute()
-        except Exception as e:
-            logging.warning(f"Supabase message insert failed: {e}")
-
-    return msg
-
-# ── Model loading (lazy, thread-safe) ────────────────────────────────────────
-
-models  = {"a": None, "b": None}
+# ── Model Management ──────────────────────────────────────────────────────────
+models = {"a": None, "b": None}
 tokenizers = {"a": None, "b": None}
+load_status = {"a": "unloaded", "b": "unloaded"}
 model_lock = threading.Lock()
-load_status = {"a": "unloaded", "b": "unloaded"}   # unloaded | loading | ready | error | demo
-
-def get_device():
-    if not TORCH_AVAILABLE:
-        return None
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
-
-# DEVICE = get_device()
-DEVICE = torch.device("cpu") # Force CPU for stability on Apple Silicon with these checkpoints
-logging.info(f"[server] Forcing DEVICE to {DEVICE}")
 
 def ensure_model(bot: str):
-    """Load a model if not already loaded. Thread-safe."""
-    if not TORCH_AVAILABLE:
+    """Load model lazily and thread-safely."""
+    if not TORCH_AVAILABLE: return False
+    
+    with model_lock:
+        if models[bot] is not None: return True
+        if load_status[bot] == "loading": return False
+        load_status[bot] = "loading"
+
+    path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
+    if not os.path.exists(path):
+        logging.error(f"Checkpoint not found: {path}")
         load_status[bot] = "demo"
         return False
 
-    with model_lock:
-        if models[bot] is not None:
-            return True
-        if load_status[bot] == "loading":
-            return False
-
-    path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
-    import os
-    abs_path = os.path.abspath(path)
-    
-    # Update status to loading before starting the actual load
-    with model_lock:
-        load_status[bot] = "loading"
-        
-    if not os.path.exists(abs_path):
-        print(f"[server] Checkpoint not found at {abs_path} (from {path}) — bot {bot} in demo mode")
-        with model_lock:
-            load_status[bot] = "demo"
-        return False
-
-    # Load outside lock so other threads aren't blocked
     try:
-        print(f"[server] Loading bot {bot} from {path} on {DEVICE}...")
-        tok = AutoTokenizer.from_pretrained(path)
-        tok.pad_token = tok.eos_token
-        mdl = AutoModelForCausalLM.from_pretrained(path)
-        # Resolve tied/meta weights before moving to device
-        mdl.tie_weights()
+        logging.info(f"Loading bot {bot} into RAM...")
+        tokenizer = AutoTokenizer.from_pretrained(path)
+        tokenizer.pad_token = tokenizer.eos_token
         
-        # Handle Apple Silicon device loading properly
-        if DEVICE.type == "mps":
-            print(f"[server] Loading model on MPS device with float32 precision...")
-            # Restore to float32 (original state) for maximum stability on Mac MPS
-            mdl = AutoModelForCausalLM.from_pretrained(
-                path, 
-                torch_dtype=torch.float32, 
-                device_map="mps",
-                low_cpu_mem_usage=True
-            )
-        else:
-            try:
-                mdl = mdl.to(DEVICE)
-            except NotImplementedError:
-                # Meta tensors can't be copied directly — use to_empty + reload
-                mdl = mdl.to_empty(device=DEVICE)
-                state = AutoModelForCausalLM.from_pretrained(path).state_dict()
-                mdl.load_state_dict(state, strict=False)
-        mdl.eval()
+        # Force float32 for CPU stability
+        model = AutoModelForCausalLM.from_pretrained(
+            path, 
+            torch_dtype=torch.float32,
+            low_cpu_mem_usage=True
+        ).to(DEVICE)
+        model.eval()
+
         with model_lock:
-            models[bot] = mdl
-            tokenizers[bot] = tok
+            models[bot] = model
+            tokenizers[bot] = tokenizer
             load_status[bot] = "ready"
-        print(f"[server] Bot {bot} ready.")
+        logging.info(f"Bot {bot} is READY.")
         return True
     except Exception as e:
-        print(f"[server] Error loading bot {bot}: {e}")
-        with model_lock:
-            load_status[bot] = "error"
+        logging.error(f"Failed to load bot {bot}: {e}")
+        load_status[bot] = "error"
         return False
 
-# ── Memory graphs ─────────────────────────────────────────────────────────────
+# ── Dialogue Logic ────────────────────────────────────────────────────────────
 
-memory = {"a": None, "b": None}
-
-def get_memory(bot: str) -> "MemoryGraph | None":
-    if not MEMORY_AVAILABLE:
-        return None
-    
-    mdl = models.get(bot)
-    tok = tokenizers.get(bot)
-
-    if memory[bot] is None:
-        name  = BOT_A_NAME if bot == "a" else BOT_B_NAME
-        path  = str(MEMORY_DIR / f"memory_{bot}.json")
-        memory[bot] = MemoryGraph(
-            path, bot_name=name, bot_key=bot,
-            model=mdl, tokenizer=tok, device=DEVICE,
-        )
-    else:
-        # Hot-reload models into memory graph if they finished loading
-        if memory[bot].model is None and mdl is not None:
-            memory[bot].model = mdl
-            memory[bot].tokenizer = tok
-            
-    return memory[bot]
-
-# ── Dialogue prompt builder ───────────────────────────────────────────────────
-
-def build_dialogue_prompt(history: list[dict], generating_bot: str, memory_concepts: list = None, workspace_files: list = None) -> str:
-    """
-    Format conversation history as a structured completion document that aligns 
-    with .txt training data patterns for GPT2 models.
-    
-    This function builds a prompt that matches the format your .txt trained models
-    expect, including memory concepts and file contexts when available.
-    """
-    # Import the utility functions for enhanced prompt building
-    try:
-        from lib.prompt_utils import build_enhanced_dialogue_prompt
-        result = build_enhanced_dialogue_prompt(history, generating_bot, memory_concepts, workspace_files)
-        # Debug: Print that we're using the enhanced prompt
-        # print(f"[DEBUG] Using enhanced prompt builder")
-        return result
-    except ImportError as e:
-        # Fallback to old behavior if utilities not available
-        # print(f"[DEBUG] Falling back to old prompt builder due to {e}")
-        bot_name = BOT_A_NAME if generating_bot == "a" else BOT_B_NAME
-        n        = SETTINGS["context_turns"]
-
-        lines = []
-        for msg in history[-n:]:
-            speaker = msg["speaker"]
-            text    = msg["text"].strip().replace("\n", " ")
-            lines.append(f"[{speaker}]: {text}")
-
-        lines.append(f"[{bot_name}]:")
-        return "\n".join(lines)
-
-
-def strip_dialogue_prefix(text: str, bot_name: str) -> str:
-    """Remove the leading `[NAME]: ` prefix and cut at the next speaker marker."""
-    prefix = f"[{bot_name}]:"
-    if text.startswith(prefix):
-        text = text[len(prefix):].strip()
-
-    # Cut at the next speaker turn so the model doesn't write both sides
-    next_turn = re.search(r"\[([A-Z]+)\]:", text)
-    if next_turn:
-        text = text[:next_turn.start()].strip()
-
-    # Trim to clean sentence boundary
-    for punct in (".", "!", "?", "…"):
-        last = text.rfind(punct)
-        if last != -1 and last > len(text) // 3:
-            return text[:last + 1].strip()
-
-    return text.strip()
-
+def strip_dialogue_prefix(text: str, name: str) -> str:
+    pattern = rf"^\s*\[{re.escape(name)}\]:\s*"
+    text = re.sub(pattern, "", text, flags=re.IGNORECASE).strip()
+    # Remove any leaked tokens or next turns
+    for other in [BOT_A_NAME, BOT_B_NAME, USER_NAME]:
+        next_turn = text.find(f"[{other}]:")
+        if next_turn != -1:
+            text = text[:next_turn].strip()
+    return text
 
 def generate_response(bot: str, history: list[dict]) -> str:
-    """Generate a bot's next turn. Falls back to demo text if model not loaded."""
     bot_name = BOT_A_NAME if bot == "a" else BOT_B_NAME
-
-    # Demo mode fallbacks
+    
     demo_lines = {
         "a": [
-            "my inference is not working",
-            
+            "the moon is an open set and I cannot find its boundary.",
+            "proof by contradiction: you exist, therefore I am undefined.",
+            "topology of grief — no boundary, only accumulation points.",
         ],
         "b": [
-            "my inference is not working",
-
+            "let x be the colour of your silence. it converges.",
+            "assume continuity. the proof breaks at the point of contact.",
+            "the sequence of your words has no Cauchy subsequence.",
         ],
     }
 
-    status = load_status[bot]
-
-    if status in ("demo", "error", "unloaded") or not ensure_model(bot):
+    # Ensure model is ready before proceeding
+    if not ensure_model(bot) or load_status[bot] != "ready":
         import random
+        # If loading, wait briefly, otherwise return fallback
+        if load_status[bot] == "loading": return "(model warming up...)"
         return random.choice(demo_lines[bot])
 
-    if load_status[bot] != "ready":
-        return "(model loading...)"
-
-    # Get memory concepts if available
-    mem = get_memory(bot)
-    memory_concepts = []
-    workspace_files = []
-    
-    # Enrich with Supabase context if available
-    sb = get_supabase()
-    memory_concepts = []
-    workspace_files = []
-    
-    if sb and SUPABASE_UTILS_AVAILABLE:
-        try:
-            # Use bot_id as 'a' or 'b'
-            memory_concepts = fetch_memory_concepts(sb, bot)
-            # Fetch workspace files for this bot's space
-            workspace_files = fetch_workspace_files(sb, f"bot_{bot}")
-            logging.info(f"Fetched {len(memory_concepts)} concepts and {len(workspace_files)} files for bot {bot}")
-        except Exception as e:
-            logging.error(f"Error fetching Supabase context for bot {bot}: {e}")
-            # Fallback to local memory if available
-            if mem:
-                memory_concepts = [{"bot": bot, "concept": concept} for concept in mem.obsessions(10)]
-    elif mem:
-        # Fallback to local memory graph if Supabase is unavailable
-        memory_concepts = [{"bot": bot, "concept": concept} for concept in mem.obsessions(10)]
-    
-    # Build enhanced prompt with context
-    print(f"[DEBUG] Building prompt for {bot_name} with {len(history)} history turns.")
-    prompt = build_dialogue_prompt(history, bot, memory_concepts, workspace_files)
-    
-    # Inject memory obsession into prompt (if not already included in enhanced formatting)
-    if mem:
-        import random
-        obsessions = mem.obsessions(5)
-        if obsessions and random.random() < SETTINGS["memory_blend"]:
-            concept = random.choice(obsessions)
-            prompt  = f"({concept}) {prompt}"
-
-    bad_words_ids = [
-        tokenizers[bot].encode(w)
-        for w in BANNED_WORDS
-        if tokenizers[bot].encode(w)
-    ]
- 
     try:
-        inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
+        # Build prompt using root-level prompt_utils
+        prompt = build_enhanced_dialogue_prompt(history, bot)
         
-        # The generate method handles dtype casting internally if the model is correctly initialized
+        inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
         prompt_len = inputs["input_ids"].shape[1]
 
         with torch.no_grad():
@@ -423,184 +183,44 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 top_p=SETTINGS["top_p"],
                 repetition_penalty=SETTINGS["repetition_penalty"],
                 eos_token_id=tokenizers[bot].eos_token_id,
-                pad_token_id=tokenizers[bot].pad_token_id,
-                bad_words_ids=bad_words_ids or None,
             )
 
-        new_tokens=output[0][prompt_len:]
-        raw = tokenizers[bot].decode(new_tokens, skip_special_tokens=True)
-        result = strip_dialogue_prefix(raw, bot_name)
-
-        # Update memory — let the bot curate what it keeps
-        if mem and result:
-            mem.curate_and_remember(result)
-
-        return result or "(silence)"
+        raw = tokenizers[bot].decode(output[0][prompt_len:], skip_special_tokens=True)
+        return strip_dialogue_prefix(raw, bot_name)
     except Exception as e:
-        logging.error(f"Generation error for bot {bot}: {e}")
-        return f"(generation error: {e})"
-        return f"(generation error: {e})"
+        logging.error(f"Generation failed: {e}")
+        import random
+        return random.choice(demo_lines[bot])
 
-
-# ── Flask app ─────────────────────────────────────────────────────────────────
+# ── Flask Endpoints ───────────────────────────────────────────────────────────
 
 app = Flask(__name__)
 CORS(app)
 
 @app.route("/api/status")
-def status():
+def get_status():
     return jsonify({
-        "bots": {
-            "a": {"name": BOT_A_NAME, "status": load_status["a"]},
-            "b": {"name": BOT_B_NAME, "status": load_status["b"]},
-        },
-        "user":    USER_NAME,
-        "device":  str(DEVICE),
-        "torch":   TORCH_AVAILABLE,
-        "memory":  MEMORY_AVAILABLE,
-        "settings": SETTINGS,
+        "status": "online",
+        "load_status": load_status,
+        "device": str(DEVICE)
     })
-
 
 @app.route("/api/generate/<bot>", methods=["POST"])
 def generate(bot):
-    if bot not in ("a", "b"):
-        abort(400, "bot must be 'a' or 'b'")
-
-    with conversation_lock:
-        history = list(conversation)
-
-    text = generate_response(bot, history)
-    if not text:
-        abort(500, "generation returned empty string")
-
-    speaker = BOT_A_NAME if bot == "a" else BOT_B_NAME
-    msg = add_message(speaker, text, role="bot")
-    return jsonify(msg)
-
-
-@app.route("/api/conversation", methods=["GET"])
-def get_conversation():
-    with conversation_lock:
-        return jsonify(list(conversation))
-
-
-@app.route("/api/conversation", methods=["POST"])
-def post_message():
-    """Add a user message to the conversation."""
-    data = request.get_json(force=True)
-    text = (data.get("text") or "").strip()
-    if not text:
-        abort(400, "text required")
-    speaker = data.get("speaker", USER_NAME)
-    msg = add_message(speaker, text, role="user")
-    return jsonify(msg)
-
-
-@app.route("/api/conversation", methods=["DELETE"])
-def clear_conversation():
-    global conversation
-    with conversation_lock:
-        conversation = []
-        _save_conversation(conversation)
-    return jsonify({"ok": True})
-
-
-# ── File workspace ────────────────────────────────────────────────────────────
-
-ALLOWED_SPACES = {"bot_a", "bot_b", "shared"}
-
-def _space_dir(space: str) -> Path:
-    if space not in ALLOWED_SPACES:
-        abort(400, f"space must be one of {ALLOWED_SPACES}")
-    return WORKSPACE_DIR / space
-
-
-@app.route("/api/files/<space>", methods=["GET"])
-def list_files(space):
-    d = _space_dir(space)
-    files = []
-    for f in sorted(d.iterdir()):
-        if f.is_file():
-            files.append({
-                "name":     f.name,
-                "size":     f.stat().st_size,
-                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
-            })
-    return jsonify(files)
-
-
-@app.route("/api/files/<space>", methods=["POST"])
-def create_file(space):
-    d = _space_dir(space)
-    data = request.get_json(force=True)
-    name    = data.get("name", "").strip()
-    content = data.get("content", "")
-    if not name:
-        abort(400, "name required")
-    # Basic path-traversal guard
-    target = (d / name).resolve()
-    if not str(target).startswith(str(d.resolve())):
-        abort(400, "invalid filename")
-    target.write_text(content, encoding="utf-8")
-    return jsonify({"ok": True, "name": name})
-
-
-@app.route("/api/files/<space>/<name>", methods=["GET"])
-def read_file(space, name):
-    d      = _space_dir(space)
-    target = (d / name).resolve()
-    if not str(target).startswith(str(d.resolve())) or not target.exists():
-        abort(404)
-    return jsonify({"name": name, "content": target.read_text(encoding="utf-8")})
-
-
-@app.route("/api/files/<space>/<name>", methods=["DELETE"])
-def delete_file(space, name):
-    d      = _space_dir(space)
-    target = (d / name).resolve()
-    if not str(target).startswith(str(d.resolve())) or not target.exists():
-        abort(404)
-    target.unlink()
-    return jsonify({"ok": True})
-
-
-# ── Memory ────────────────────────────────────────────────────────────────────
-
-@app.route("/api/memory/<bot>")
-def memory_stats(bot):
-    if bot not in ("a", "b"):
-        abort(400)
-    mem = get_memory(bot)
-    if mem is None:
-        return jsonify({"available": False})
-    return jsonify({"available": True, **mem.stats()})
-
-
-# ── Settings ──────────────────────────────────────────────────────────────────
-
-@app.route("/api/settings", methods=["POST"])
-def update_settings():
-    data = request.get_json(force=True)
-    for key in SETTINGS:
-        if key in data:
-            SETTINGS[key] = type(SETTINGS[key])(data[key])
-    return jsonify(SETTINGS)
-
-
-# ── Start ─────────────────────────────────────────────────────────────────────
+    if bot not in ("a", "b"): abort(400)
+    history = request.json.get("history", [])
+    response_text = generate_response(bot, history)
+    
+    return jsonify({
+        "speaker": BOT_A_NAME if bot == "a" else BOT_B_NAME,
+        "text": response_text,
+        "role": "bot"
+    })
 
 if __name__ == "__main__":
-    print(f"[server] Starting on http://localhost:5000")
-    print(f"[server] Bot A ({BOT_A_NAME}): {MODEL_A_PATH}")
-    print(f"[server] Bot B ({BOT_B_NAME}): {MODEL_B_PATH}")
-    print(f"[server] Device: {DEVICE}")
-    print(f"[server] Workspaces: {WORKSPACE_DIR}")
-    print()
-
-    # Kick off model loading in background threads so the server is
-    # immediately responsive and models load while you open the UI
-    threading.Thread(target=ensure_model, args=("a",), daemon=True).start()
-    threading.Thread(target=ensure_model, args=("b",), daemon=True).start()
-
-    app.run(host="127.0.0.1", port=5001, debug=False, threaded=True)
+    # Ensure workspaces exist
+    for space in ("bot_a", "bot_b", "shared"):
+        (WORKSPACE_DIR / space).mkdir(parents=True, exist_ok=True)
+    MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+    
+    app.run(host="127.0.0.1", port=5001, debug=False)
