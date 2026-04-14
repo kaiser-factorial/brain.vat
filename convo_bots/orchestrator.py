@@ -67,7 +67,7 @@ CYCLE_SLEEP = int(os.getenv("CYCLE_SLEEP", 1200))
 CYCLE_JITTER = int(os.getenv("CYCLE_JITTER", 180))
 
 # Generation settings
-TEMPERATURE        = float(os.getenv("TEMPERATURE", 1.05))
+TEMPERATURE        = float(os.getenv("TEMPERATURE", .91))
 TOP_P              = float(os.getenv("TOP_P", 0.95))
 REPETITION_PENALTY = float(os.getenv("REPETITION_PENALTY", 1.2))
 MAX_NEW_TOKENS     = int(os.getenv("MAX_NEW_TOKENS", 55))
