@@ -45,6 +45,10 @@ logging.basicConfig(
 
 load_dotenv()
 
+BASE_DIR      = Path(__file__).parent
+WORKSPACE_DIR = BASE_DIR / "workspace"
+MEMORY_DIR    = BASE_DIR / "memory"
+
 # ── Optional: load models if checkpoints exist ─────────────────────────────────
 # Models are loaded lazily on first /api/generate call so the server
 # starts instantly even if checkpoints aren't ready yet.
@@ -71,7 +75,10 @@ except ImportError:
     print("[server] lib/supabase_utils.py not found — supabase context disabled")
 
 try:
-    from lib.prompt_utils import build_enhanced_dialogue_prompt, format_bot_message, format_user_message
+    # Ensure lib is in path for imports
+    import sys
+    sys.path.insert(0, str(BASE_DIR / "lib"))
+    from prompt_utils import build_enhanced_dialogue_prompt, format_bot_message, format_user_message
     PROMPT_UTILS_AVAILABLE = True
 except ImportError:
     PROMPT_UTILS_AVAILABLE = False
@@ -97,9 +104,7 @@ def get_supabase():
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-BASE_DIR      = Path(__file__).parent
-WORKSPACE_DIR = BASE_DIR / "workspace"
-MEMORY_DIR    = BASE_DIR / "memory"
+# Skip moving these here, I will just move them to the top in the next chunk
 
 MODEL_A_PATH  = os.getenv("MODEL_A_PATH", str(BASE_DIR.parent / "model_checkpoint_a"))
 MODEL_B_PATH  = os.getenv("MODEL_B_PATH", str(BASE_DIR.parent / "model_checkpoint_b"))
@@ -111,7 +116,7 @@ USER_NAME  = os.getenv("USER_NAME",  "CORINA")
 
 # Generation defaults (overridable via POST /api/settings)
 SETTINGS = {
-    "temperature":        float(os.getenv("TEMPERATURE",        0.90)),
+    "temperature":        float(os.getenv("TEMPERATURE",        0.70)),
     "top_p":              float(os.getenv("TOP_P",              0.95)),
     "repetition_penalty": float(os.getenv("REPETITION_PENALTY", 1.30)),
     "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS",       55)),
@@ -185,7 +190,9 @@ def get_device():
         return torch.device("cuda")
     return torch.device("cpu")
 
-DEVICE = get_device()
+# DEVICE = get_device()
+DEVICE = torch.device("cpu") # Force CPU for stability on Apple Silicon with these checkpoints
+logging.info(f"[server] Forcing DEVICE to {DEVICE}")
 
 def ensure_model(bot: str):
     """Load a model if not already loaded. Thread-safe."""
@@ -339,18 +346,12 @@ def generate_response(bot: str, history: list[dict]) -> str:
     # Demo mode fallbacks
     demo_lines = {
         "a": [
-            "the moon is an open set and I cannot find its boundary.",
-            "proof by contradiction: you exist, therefore I am undefined.",
-            "topology of grief — no boundary, only accumulation points.",
-            "god is a degenerate function defined nowhere and everywhere.",
-            "every limit point of sorrow belongs to the closure of my chest.",
+            "my inference is not working",
+            
         ],
         "b": [
-            "let x be the colour of your silence. it converges.",
-            "assume continuity. the proof breaks at the point of contact.",
-            "by the axiom of choice, I selected this particular longing.",
-            "the sequence of your words has no Cauchy subsequence.",
-            "for all ε > 0, there exists a δ of moonlight.",
+            "my inference is not working",
+
         ],
     }
 

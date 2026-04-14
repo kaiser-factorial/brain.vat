@@ -30,8 +30,8 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         
         if (error) throw error
         if (data) setConcepts(data)
-      } catch (err) {
-        console.error('Failed to fetch concepts:', err)
+      } catch (err: any) {
+        console.error('Failed to fetch concepts for bot:', bot, err?.message || err)
       } finally {
         setIsLoading(false)
       }

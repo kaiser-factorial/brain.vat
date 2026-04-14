@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { FileModal } from './file-modal'
+import Link from 'next/link'
 
 interface HeaderProps {
   onAuthClick?: () => void
@@ -17,7 +18,16 @@ export function Header({ onAuthClick }: HeaderProps) {
       <header className="border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
-            <h1 className="text-xl font-bold text-primary">brain.vat</h1>
+            <Link href="/">
+              <h1 className="text-xl font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity">
+                brain.vat
+              </h1>
+            </Link>
+            <Link href="/about">
+              <span className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer">
+                [about]
+              </span>
+            </Link>
           </div>
 
           <div className="flex-1 flex justify-center">

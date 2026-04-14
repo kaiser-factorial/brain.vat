@@ -17,19 +17,24 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     hour12: false
   })
 
-  // Use parsed speaker for consistent styling regardless of manual database entries
-  const speaker = parsed.speaker || message.speaker
+  // Use database speaker metadata as the primary authority, fall back to parsed tag if missing
+  const dbSpeaker = message.speaker || ''
+  const parsedSpeaker = parsed.speaker || ''
+  
+  // Normalize speaker name (MAUK, ABACI, USER)
+  const rawName = (dbSpeaker || parsedSpeaker || 'UNKNOWN').toUpperCase()
+  const speaker = rawName === 'CORINA' ? 'USER' : rawName
 
   const getSpeakerStyle = () => {
     switch (speaker) {
       case 'MAUK':
-        return 'text-mauk mauk-glow'
+        return 'text-mauk mauk-glow underline decoration-mauk/20'
       case 'ABACI':
-        return 'text-abaci abaci-glow'
+        return 'text-abaci abaci-glow underline decoration-abaci/20'
       case 'USER':
-        return 'text-user'
+        return 'text-user font-bold'
       default:
-        return 'text-muted-foreground'
+        return 'text-muted-foreground italic'
     }
   }
 

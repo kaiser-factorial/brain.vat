@@ -1,6 +1,6 @@
 /**
  * Frontend message handling utilities to work with the enhanced structured messaging system.
- * Ported from Python implementation for consistency with GPT-2 formatting.
+ * Optimized for barebones dialogue mode to restore bot stability.
  */
 
 export interface ParsedMessage {
@@ -13,46 +13,48 @@ export interface ParsedMessage {
  * Format a user message for storage and processing.
  */
 export function format_user_message(text: string, speaker: string = "USER"): string {
-  return `[${speaker}] SAYS: "${text}"`;
+  return `[${speaker}]: ${text}`;
 }
 
 /**
  * Format a bot message for storage.
  */
 export function format_bot_message(speaker: string, text: string): string {
-  return `[${speaker}] SAYS: "${text}"`;
+  return `[${speaker}]: ${text}`;
 }
 
 /**
  * Parse a structured message for frontend display.
+ * Robustly strips [NAME]: or [NAME] SAYS: prefixes.
  */
 export function parse_message_for_frontend_display(text: string): ParsedMessage {
-  // Pattern to match [SPEAKER] SAYS: "text" | [I] SAY: "continuation"
-  const pattern = /^\[([A-Z]+)\]\s+SAYS:\s+"(.+?)"(?:\s*\|\s*\[I\]\s+SAY:\s+"(.+?)")?$/;
-  const match = text.trim().match(pattern);
+  const trimmed = text.trim();
   
-  if (match) {
+  // 1. Match [SPEAKER] SAYS: "text" | [I] SAY: "continuation"
+  const structuredPattern = /^\[([A-Z]+)\]\s+SAYS:\s+"(.+?)"(?:\s*\|\s*\[I\]\s+SAY:\s+"(.+?)")?$/;
+  const structuredMatch = trimmed.match(structuredPattern);
+  if (structuredMatch) {
     return {
-      speaker: match[1],
-      text: match[2],
-      continuation: match[3] || undefined
+      speaker: structuredMatch[1],
+      text: structuredMatch[2],
+      continuation: structuredMatch[3] || undefined
     };
   }
   
-  // Pattern to match [SPEAKER]: "text" (older format or loose format)
-  const legacyPattern = /^\[([A-Z]+)\]:\s+(.+)$/;
-  const legacyMatch = text.trim().match(legacyPattern);
-  if (legacyMatch) {
+  // 2. Match standard [SPEAKER]: Text (Barebones training format)
+  const dialoguePattern = /^\[([A-Z0-9_-]+)\]:\s*(.+)$/i;
+  const dialogueMatch = trimmed.match(dialoguePattern);
+  if (dialogueMatch) {
     return {
-      speaker: legacyMatch[1],
-      text: legacyMatch[2]
+      speaker: dialogueMatch[1],
+      text: dialogueMatch[2]
     };
   }
-  
-  // Fallback - return as-is  
+
+  // 3. Fallback: If it's just raw text, return empty speaker to allow DB fallback
   return {
-    speaker: 'UNKNOWN',
-    text: text.trim()
+    speaker: '',
+    text: trimmed
   };
 }
 
