@@ -106,5 +106,17 @@ def test_supabase_integration():
     concepts = build_memory_concept_list(sample_memory)
     print(f"Converted concepts: {concepts}")
 
+def get_last_speaker(sb_client) -> Optional[str]:
+    """Fetch the name of the speaker who posted the most recent message."""
+    if not sb_client:
+        return None
+    try:
+        response = sb_client.table("messages").select("speaker").order("created_at", desc=True).limit(1).execute()
+        if response.data:
+            return response.data[0].get("speaker")
+    except Exception as e:
+        print(f"Error fetching last speaker: {e}")
+    return None
+
 if __name__ == "__main__":
     test_supabase_integration()

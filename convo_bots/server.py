@@ -32,8 +32,9 @@ MEMORY_DIR    = BASE_DIR / "memory"
 # ── Root Utility Imports ──────────────────────────────────────────────────────
 # Standardized imports from root convo_bots/ directory
 try:
-    from supabase_utils import fetch_memory_concepts, fetch_workspace_files
+    from supabase_utils import fetch_memory_concepts, fetch_workspace_files, get_supabase_client
     SUPABASE_UTILS_AVAILABLE = True
+    sb_client = get_supabase_client()
 except ImportError:
     SUPABASE_UTILS_AVAILABLE = False
     logging.warning("supabase_utils.py not found")
@@ -86,6 +87,7 @@ else:
 models = {"a": None, "b": None}
 tokenizers = {"a": None, "b": None}
 load_status = {"a": "unloaded", "b": "unloaded"}
+memory_graphs = {"a": None, "b": None}
 model_lock = threading.Lock()
 
 def ensure_model(bot: str):
@@ -119,7 +121,19 @@ def ensure_model(bot: str):
             models[bot] = model
             tokenizers[bot] = tokenizer
             load_status[bot] = "ready"
-        logging.info(f"Bot {bot} READY.")
+            
+            # Initialize MemoryGraph for this bot now that model is ready
+            if MEMORY_AVAILABLE:
+                memory_graphs[bot] = MemoryGraph(
+                    save_path=MEMORY_DIR / f"memory_{bot}.json",
+                    bot_name=BOT_A_NAME if bot == "a" else BOT_B_NAME,
+                    bot_key=bot,
+                    model=model,
+                    tokenizer=tokenizer,
+                    device=DEVICE
+                )
+
+        logging.info(f"Bot {bot} READY (Memory pipeline linked).")
         return True
     except Exception as e:
         logging.error(f"Failed to load bot {bot}: {e}")
@@ -183,9 +197,45 @@ def get_status():
 @app.route("/api/generate/<bot>", methods=["POST"])
 def generate(bot):
     if bot not in ("a", "b"): abort(400)
-    history = request.json.get("history", [])
-    text = generate_response(bot, history)
-    return jsonify({"speaker": BOT_A_NAME if bot == "a" else BOT_B_NAME, "text": text})
+    
+    # Fetch context from Supabase to ensure bots are coherent
+    db_history = []
+    if SUPABASE_UTILS_AVAILABLE and sb_client:
+        try:
+            res = sb_client.table("messages").select("speaker, text").order("created_at", desc=True).limit(6).execute()
+            db_history = list(reversed(res.data)) if res.data else []
+        except Exception as e:
+            logging.error(f"Failed to fetch context: {e}")
+
+    # Generate the response
+    text = generate_response(bot, db_history)
+    bot_name = BOT_A_NAME if bot == "a" else BOT_B_NAME
+    
+    # PERSISTENCE: Save the response to Supabase
+    if SUPABASE_UTILS_AVAILABLE and sb_client:
+        try:
+            sb_client.table("messages").insert({
+                "speaker": bot_name,
+                "text": text,
+                "role": "bot"
+            }).execute()
+            logging.info(f"Message from {bot_name} saved to Supabase.")
+        except Exception as e:
+            logging.error(f"Failed to save message: {e}")
+
+    # CURATION: Process memory in background
+    if MEMORY_AVAILABLE and memory_graphs[bot]:
+        def curate_task(txt, g):
+            try:
+                concepts = g.curate_and_remember(txt)
+                if concepts:
+                    logging.info(f"Memory archived for {bot_name}: {concepts}")
+            except Exception as e:
+                logging.error(f"Memory curation failed for {bot_name}: {e}")
+        
+        threading.Thread(target=curate_task, args=(text, memory_graphs[bot]), daemon=True).start()
+
+    return jsonify({"speaker": bot_name, "text": text})
 
 if __name__ == "__main__":
     # Auto-prime models in background to break the wait-loop with loop.py

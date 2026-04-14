@@ -22,16 +22,24 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
 
   useEffect(() => {
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .limit(100)
-      
-      if (data) {
-        setMessages(data)
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(100)
+        
+        if (error) throw error
+        
+        if (data && data.length > 0) {
+          // Reverse a copy to appear in chronological order
+          setMessages([...data].reverse())
+        }
+      } catch (err) {
+        console.error('Failed to fetch messages:', err)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     fetchMessages()

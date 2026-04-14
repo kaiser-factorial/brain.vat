@@ -40,7 +40,13 @@ from datetime import datetime
 import requests
 from dotenv import load_dotenv
 
+# Import supabase utils
+from supabase_utils import get_supabase_client, get_last_speaker
+
 load_dotenv()
+
+# Initialize Supabase client
+sb_client = get_supabase_client()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -208,43 +214,68 @@ def main():
 
     cycle = 0
 
+    log.info("Organic turn-taking mode active.")
+    
     while True:
         cycle += 1
-        if args.cycles and cycle > args.cycles:
-            log.info(f"Reached {args.cycles} cycle(s). Stopping.")
-            break
+        
+        # Check who spoke last to ensure strictly alternating turns
+        last_speaker = "UNKNOWN"
+        if sb_client:
+            last_speaker = get_last_speaker(sb_client) or "UNKNOWN"
+            log.info(f"Last speaker found in DB: {last_speaker}")
+
+        # Decide who speaks next
+        # WEIGHED RANDOM: 70% chance to alternate, 30% chance to double-text
+        # But we cap at 2 in a row to satisfy "not a whole bunch"
+        
+        # Check the last TWO messages to count repetitions
+        repeat_count = 0
+        if sb_client:
+            try:
+                history_res = sb_client.table("messages").select("speaker").order("created_at", desc=True).limit(2).execute()
+                if history_res.data:
+                    last_speaker = history_res.data[0].get("speaker")
+                    # If the last two speakers are the same, we MUST alternate
+                    if len(history_res.data) > 1 and history_res.data[0]["speaker"] == history_res.data[1]["speaker"]:
+                        repeat_count = 2
+            except:
+                pass
+
+        if repeat_count >= 2:
+            # Must alternate
+            next_bot = "b" if last_speaker == BOT_A_NAME else "a"
+        else:
+            # Weighted random: 70% chance to flip, 30% to stay
+            choices = ["a", "b"]
+            if last_speaker == BOT_A_NAME:
+                # Weights: [Mauk (Stay), Abaci (Flip)]
+                next_bot = random.choices(choices, weights=[0.35, 0.65])[0]
+            else:
+                # Weights: [Mauk (Flip), Abaci (Stay)]
+                next_bot = random.choices(choices, weights=[0.65, 0.35])[0]
+        
+        next_bot_name = BOT_A_NAME if next_bot == "a" else BOT_B_NAME
 
         log.info(f"\n{'─' * 50}")
-        log.info(f"Cycle {cycle} — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        log.info(f"Organic Turn {cycle} — {next_bot_name} is thinking...")
         log.info(f"{'─' * 50}")
 
-        # ── Mauk speaks first ──────────────────────────────────
-        if not args.only_b:
-            trigger_generate("a", dry_run=args.dry_run)
-
-        # ── Pause between turns ────────────────────────────────
-        if not args.only_a and not args.only_b:
-            jitter = random.randint(0, args.pause // 2)
-            gap = args.pause + jitter
-            log.info(f"Pausing {gap}s before {BOT_B_NAME} responds ...")
-            if not args.dry_run:
-                time.sleep(gap)
-
-        # ── Abaci responds ─────────────────────────────────────
-        if not args.only_a:
-            trigger_generate("b", dry_run=args.dry_run)
-
-        # ── Sleep until next cycle ─────────────────────────────
-        if args.cycles and cycle >= args.cycles:
-            continue   # will break at top of next iteration
-
-        jitter     = random.randint(-args.jitter, args.jitter)
-        sleep_time = max(30, args.sleep + jitter)
-        wake_at    = datetime.fromtimestamp(time.time() + sleep_time).strftime("%H:%M:%S")
-        log.info(f"\nNext exchange in {sleep_time}s (at {wake_at})")
+        if not args.dry_run:
+            trigger_generate(next_bot, dry_run=args.dry_run)
+            
+        # ── RANDOMIZED THINKING DELAY ─────────────────────────────
+        # Instead of a fixed pause, we wait between 20s and 120s
+        jitter = random.randint(20, 45)
+        wake_at = datetime.fromtimestamp(time.time() + jitter).strftime("%H:%M:%S")
+        log.info(f"Next turn in {jitter}s (at {wake_at})...")
 
         if not args.dry_run:
-            time.sleep(sleep_time)
+            time.sleep(jitter)
+
+        if args.cycles and cycle >= args.cycles:
+            log.info(f"Reached {args.cycles} cycle(s). Stopping.")
+            break
 
 
 if __name__ == "__main__":
