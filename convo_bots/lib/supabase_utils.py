@@ -49,9 +49,8 @@ def fetch_workspace_files(sb_client, space: str) -> List[Dict]:
         return []
         
     try:
-        # In a real implementation, this would fetch from the files table
-        # We'll simulate with a basic example for now
-        return []
+        response = sb_client.table("workspace_files").select("*").eq("space", space).execute()
+        return response.data if response.data else []
     except Exception as e:
         print(f"Error fetching workspace files: {e}")
         return []

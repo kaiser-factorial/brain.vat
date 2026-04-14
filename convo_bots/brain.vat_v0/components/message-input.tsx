@@ -31,7 +31,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
@@ -45,7 +45,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
         <textarea
           ref={inputRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "authentication required to speak..." : "speak into the void..."}
           className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[24px] max-h-[120px] disabled:cursor-not-allowed"

@@ -38,6 +38,11 @@ from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 load_dotenv()
 
 # ── Optional: load models if checkpoints exist ─────────────────────────────────
@@ -57,6 +62,20 @@ try:
 except ImportError:
     MEMORY_AVAILABLE = False
     print("[server] memory_graph.py not found — memory disabled")
+
+try:
+    from lib.supabase_utils import fetch_memory_concepts, fetch_workspace_files
+    SUPABASE_UTILS_AVAILABLE = True
+except ImportError:
+    SUPABASE_UTILS_AVAILABLE = False
+    print("[server] lib/supabase_utils.py not found — supabase context disabled")
+
+try:
+    from lib.prompt_utils import build_enhanced_dialogue_prompt, format_bot_message, format_user_message
+    PROMPT_UTILS_AVAILABLE = True
+except ImportError:
+    PROMPT_UTILS_AVAILABLE = False
+    print("[server] lib/prompt_utils.py not found — prompt utils disabled")
 
 # ── Supabase (optional) ───────────────────────────────────────────────────────
 
@@ -181,15 +200,18 @@ def ensure_model(bot: str):
             return False
 
     path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
-    # Ensure the path is valid for loading (not relative path that looks like repo name)
     import os
     abs_path = os.path.abspath(path)
+    
+    # Update status to loading before starting the actual load
+    with model_lock:
+        load_status[bot] = "loading"
+        
     if not os.path.exists(abs_path):
         print(f"[server] Checkpoint not found at {abs_path} (from {path}) — bot {bot} in demo mode")
-        load_status[bot] = "demo"
+        with model_lock:
+            load_status[bot] = "demo"
         return False
-
-        load_status[bot] = "loading"
 
     # Load outside lock so other threads aren't blocked
     try:
@@ -202,10 +224,14 @@ def ensure_model(bot: str):
         
         # Handle Apple Silicon device loading properly
         if DEVICE.type == "mps":
-            # Workaround for meta tensors on MPS - load directly to proper device
-            print(f"[server] Loading model on MPS device with special handling for Apple Silicon...")
-            # Load model directly with device parameter
-            mdl = AutoModelForCausalLM.from_pretrained(path, device_map="auto", torch_dtype=torch.float32)
+            print(f"[server] Loading model on MPS device with float32 precision...")
+            # Restore to float32 (original state) for maximum stability on Mac MPS
+            mdl = AutoModelForCausalLM.from_pretrained(
+                path, 
+                torch_dtype=torch.float32, 
+                device_map="mps",
+                low_cpu_mem_usage=True
+            )
         else:
             try:
                 mdl = mdl.to(DEVICE)
@@ -264,11 +290,8 @@ def build_dialogue_prompt(history: list[dict], generating_bot: str, memory_conce
     expect, including memory concepts and file contexts when available.
     """
     # Import the utility functions for enhanced prompt building
-    import sys
-    sys.path.append(str(Path(__file__).parent / "lib"))
-    
     try:
-        from prompt_utils import build_enhanced_dialogue_prompt
+        from lib.prompt_utils import build_enhanced_dialogue_prompt
         result = build_enhanced_dialogue_prompt(history, generating_bot, memory_concepts, workspace_files)
         # Debug: Print that we're using the enhanced prompt
         # print(f"[DEBUG] Using enhanced prompt builder")
@@ -342,14 +365,32 @@ def generate_response(bot: str, history: list[dict]) -> str:
 
     # Get memory concepts if available
     mem = get_memory(bot)
-    memory_concepts = None
-    if mem:
-        memory_concepts = [{"bot": bot, "concept": concept} for concept in mem.obsessions(10)]
-    
-    # Get workspace files - in a real implementation, you'd pull these from storage
+    memory_concepts = []
     workspace_files = []
     
+    # Enrich with Supabase context if available
+    sb = get_supabase()
+    memory_concepts = []
+    workspace_files = []
+    
+    if sb and SUPABASE_UTILS_AVAILABLE:
+        try:
+            # Use bot_id as 'a' or 'b'
+            memory_concepts = fetch_memory_concepts(sb, bot)
+            # Fetch workspace files for this bot's space
+            workspace_files = fetch_workspace_files(sb, f"bot_{bot}")
+            logging.info(f"Fetched {len(memory_concepts)} concepts and {len(workspace_files)} files for bot {bot}")
+        except Exception as e:
+            logging.error(f"Error fetching Supabase context for bot {bot}: {e}")
+            # Fallback to local memory if available
+            if mem:
+                memory_concepts = [{"bot": bot, "concept": concept} for concept in mem.obsessions(10)]
+    elif mem:
+        # Fallback to local memory graph if Supabase is unavailable
+        memory_concepts = [{"bot": bot, "concept": concept} for concept in mem.obsessions(10)]
+    
     # Build enhanced prompt with context
+    print(f"[DEBUG] Building prompt for {bot_name} with {len(history)} history turns.")
     prompt = build_dialogue_prompt(history, bot, memory_concepts, workspace_files)
     
     # Inject memory obsession into prompt (if not already included in enhanced formatting)
@@ -365,9 +406,11 @@ def generate_response(bot: str, history: list[dict]) -> str:
         for w in BANNED_WORDS
         if tokenizers[bot].encode(w)
     ]
-
+ 
     try:
         inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
+        
+        # The generate method handles dtype casting internally if the model is correctly initialized
         prompt_len = inputs["input_ids"].shape[1]
 
         with torch.no_grad():
@@ -559,4 +602,4 @@ if __name__ == "__main__":
     threading.Thread(target=ensure_model, args=("a",), daemon=True).start()
     threading.Thread(target=ensure_model, args=("b",), daemon=True).start()
 
-    app.run(host="127.0.0.1", port=5000, debug=False, threaded=True)
+    app.run(host="127.0.0.1", port=5001, debug=False, threaded=True)

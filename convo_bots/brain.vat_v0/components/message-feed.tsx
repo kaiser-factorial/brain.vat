@@ -7,6 +7,7 @@ import type { Message } from '@/lib/types'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { toast } from 'sonner'
+import { format_user_message } from '@/lib/frontend-message-handlers'
 
 interface MessageFeedProps {
   onAuthClick?: () => void
@@ -41,7 +42,7 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
+        (payload: { new: Message }) => {
           setMessages((prev) => [...prev, payload.new as Message])
         }
       )
@@ -61,9 +62,12 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
   const handleSendMessage = async (text: string) => {
     if (!user) return
 
+    // Format user message for structured GPT-2 pattern
+    const formattedText = format_user_message(text, 'USER')
+
     const { error } = await supabase.from('messages').insert({
-      speaker: displayName || 'anon',
-      text,
+      speaker: 'USER',
+      text: formattedText,
       role: 'user',
       user_id: user.id
     })

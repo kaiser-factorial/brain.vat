@@ -75,7 +75,7 @@ export function FileModal({ isOpen, onClose }: FileModalProps) {
       .single()
 
     if (!error && data) {
-      setFiles((prev) => [data, ...prev])
+      setFiles((prev: WorkspaceFile[]) => [data, ...prev])
       setSelectedFile(data)
       setContent('')
       setNewFilename('')
@@ -140,7 +140,7 @@ export function FileModal({ isOpen, onClose }: FileModalProps) {
                 no files in this space
               </p>
             ) : (
-              files.map((file) => (
+              files.map((file: WorkspaceFile) => (
                 <button
                   key={file.id}
                   onClick={() => handleSelectFile(file)}
@@ -172,7 +172,7 @@ export function FileModal({ isOpen, onClose }: FileModalProps) {
               </div>
               <textarea
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
                 disabled={activeTab !== 'shared'}
                 className="flex-1 bg-input border border-border rounded p-4 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60"
                 placeholder="write something..."
