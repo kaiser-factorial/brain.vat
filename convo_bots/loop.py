@@ -48,6 +48,18 @@ load_dotenv()
 # Initialize Supabase client
 sb_client = get_supabase_client()
 
+# PID file management
+PID_FILE = "loop.pid"
+with open(PID_FILE, "w") as f:
+    f.write(str(os.getpid()))
+
+def cleanup_pid():
+    if os.path.exists(PID_FILE):
+        os.remove(PID_FILE)
+
+import atexit
+atexit.register(cleanup_pid)
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 SERVER_URL   = os.getenv("SERVER_URL",   "http://127.0.0.1:5001")

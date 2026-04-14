@@ -73,7 +73,7 @@ export default function ArchivePage() {
           <div className="flex-1 grid grid-cols-3 gap-8 overflow-hidden">
             
             {/* Column A: MAUK Exclusive */}
-            <div className="flex flex-col border border-mauk/20 bg-mauk/5 p-4 rounded-sm overflow-hidden group">
+            <div className="flex flex-col border border-mauk/20 bg-mauk/5 p-4 rounded-sm group">
               <h2 className="text-mauk text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-mauk mauk-glow animate-pulse" />
                 MAUK / EXCLUSIVE
@@ -94,13 +94,13 @@ export default function ArchivePage() {
             </div>
 
             {/* Column Common: Shared Minds */}
-            <div className="flex flex-col border border-primary/30 bg-primary/5 p-4 rounded-sm overflow-hidden shadow-[0_0_20px_rgba(230,57,70,0.1)]">
+            <div className="flex flex-col border border-primary/30 bg-primary/5 p-4 rounded-sm shadow-[0_0_20px_rgba(230,57,70,0.1)] text-center">
               <h2 className="text-primary text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-center">
                 <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
                 SHARED OBSESSIONS
                 <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
               </h2>
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
                 {common.map(c => (
                   <MemoryNode 
                     key={c} 
@@ -116,7 +116,7 @@ export default function ArchivePage() {
             </div>
 
             {/* Column B: ABACI Exclusive */}
-            <div className="flex flex-col border border-abaci/20 bg-abaci/5 p-4 rounded-sm overflow-hidden">
+            <div className="flex flex-col border border-abaci/20 bg-abaci/5 p-4 rounded-sm">
               <h2 className="text-abaci text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-end">
                 ABACI / EXCLUSIVE
                 <div className="w-2 h-2 rounded-full bg-abaci abaci-glow animate-pulse" />
@@ -144,24 +144,31 @@ export default function ArchivePage() {
 }
 
 function MemoryNode({ concept, bot, theme, onHover, isShowing, source }: any) {
+  // Only show tooltip if we have a real string and it's not a placeholder/error
+  const hasValidSource = source && 
+                         source !== 'recalling...' && 
+                         source !== '(Context lost to time)' && 
+                         source !== '(error recalling)' &&
+                         source !== '(Source unavailable — offline mode)'
+
   return (
     <div 
-      className="relative group cursor-help"
+      className="relative group cursor-help px-4"
       onMouseEnter={() => onHover(bot, concept)}
     >
       <div className={cn(
-        "text-sm font-mono transition-all duration-300 hover:scale-105",
-        theme === 'mauk' ? 'text-mauk hover:text-mauk/100 text-opacity-70' :
-        theme === 'abaci' ? 'text-abaci hover:text-abaci/100 text-opacity-70' :
-        'text-primary font-bold animate-pulse'
+        "text-sm font-mono transition-all duration-300 hover:scale-110",
+        theme === 'mauk' ? 'text-mauk hover:text-mauk/100 text-opacity-70 origin-left' :
+        theme === 'abaci' ? 'text-abaci hover:text-abaci/100 text-opacity-70 origin-right' :
+        'text-primary font-bold animate-pulse origin-center'
       )}>
         {concept}
       </div>
       
-      {isShowing && (
+      {isShowing && hasValidSource && (
         <div className={cn(
           "fixed z-[100] p-3 bg-card border border-border rounded-lg shadow-2xl text-[10px] leading-tight w-[240px] pointer-events-none",
-          "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" // Central recall for archive
+          "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
         )}>
           <div className="text-muted-foreground font-bold mb-1 uppercase tracking-widest">[RECALLING FRAGMENT]</div>
           <div className="italic text-foreground overflow-hidden text-ellipsis line-clamp-4">

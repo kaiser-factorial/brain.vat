@@ -43,6 +43,18 @@ create table if not exists profiles (
   created_at   timestamptz default now()
 );
 
+-- Historical memory archive (permanent record with provenance)
+create table if not exists memory_archive (
+  id                uuid        default gen_random_uuid() primary key,
+  bot               text        not null check (bot = any (array['a', 'b'])),
+  concept           text        not null,
+  occurrence_count  integer     default 1,
+  first_thought_at  timestamptz default now(),
+  last_thought_at   timestamptz default now(),
+  source_text       text,       -- origin dialogue snippet
+  unique (bot, concept)
+);
+
 -- Auto-create a profile row when a user signs up
 create or replace function handle_new_user()
 returns trigger language plpgsql security definer as $$
@@ -63,6 +75,7 @@ create trigger on_auth_user_created
 
 alter table messages        enable row level security;
 alter table memory_concepts enable row level security;
+alter table memory_archive  enable row level security;
 alter table workspace_files enable row level security;
 alter table profiles        enable row level security;
 
@@ -78,6 +91,9 @@ create policy "auth users insert messages"
 -- memory: read-only for everyone (written only by server via service role)
 create policy "public read memory"
   on memory_concepts for select using (true);
+
+create policy "public read archive"
+  on memory_archive for select using (true);
 
 -- workspace files: shared + bot_a are public read; bot_b is public read too
 --                  (writes are server-only via service role)
@@ -99,6 +115,7 @@ create policy "users update own profile"
 
 alter publication supabase_realtime add table messages;
 alter publication supabase_realtime add table memory_concepts;
+alter publication supabase_realtime add table memory_archive; 
 
 
 -- ── Seed workspace files ─────────────────────────────────────────────────────

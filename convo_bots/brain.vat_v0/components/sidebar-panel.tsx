@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { StabilityVitals } from './stability-vitals'
 import type { MemoryConcept, Bot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -92,51 +93,78 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
 
   return (
     <div className={cn(
-      'h-full border-border p-4 flex flex-col min-w-[180px]',
+      'h-full border-border p-4 flex flex-col min-w-[200px] bg-background/50 backdrop-blur-sm',
       side === 'left' ? 'border-r' : 'border-l'
     )}>
-      <h2 className={cn('text-lg font-bold mb-4', colorClass, glowClass)}>
+      <h2 className={cn('text-lg font-bold mb-1 tracking-tighter uppercase', colorClass, glowClass)}>
         {owner}
       </h2>
       
-      <div className="flex-1 space-y-3 overflow-y-auto">
+      <div className="mb-4 pb-2 border-b border-border/30">
+        <StabilityVitals bot={bot} />
+      </div>
+      
+      <div className={cn(
+        "flex-1 space-y-4 overflow-y-auto scrollbar-none px-2",
+      )}>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">scanning<span className="cursor-blink">_</span></p>
+          <p className="text-sm text-muted-foreground opacity-50 font-mono">scanning<span className="cursor-blink">_</span></p>
         ) : error ? (
-          <div className="text-xs text-red-900 bg-red-950/20 p-2 border border-red-900/50">
+          <div className="text-xs text-red-900 bg-red-950/20 p-2 border border-red-900/50 font-mono">
             ERR: {error}
           </div>
         ) : concepts.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic animate-pulse">no memories yet</p>
+          <p className="text-sm text-muted-foreground italic animate-pulse font-mono">no memories yet</p>
         ) : (
-          concepts.map((concept) => (
-            <div
-              key={concept.id}
-              className="group relative cursor-help"
-              onMouseEnter={() => handleMouseEnter(concept.concept)}
-              onMouseLeave={() => setHoveredConcept(null)}
-            >
-              <div 
-                className="text-sm transition-opacity duration-300"
-                style={{ opacity: 0.3 + (concept.weight / 10) * 0.7 }}
+          concepts.map((concept) => {
+            const hasValidSource = sourceText && 
+                                   sourceText !== 'recalling...' && 
+                                   sourceText !== '(Context lost to time)' && 
+                                   sourceText !== '(error recalling)' &&
+                                   sourceText !== '(Source unavailable — offline mode)'
+
+            return (
+              <div
+                key={concept.id}
+                className="group relative cursor-help px-2"
+                onMouseEnter={() => handleMouseEnter(concept.concept)}
+                onMouseLeave={() => setHoveredConcept(null)}
               >
-                <span className={cn('font-mono', colorClass)}>{concept.concept}</span>
-                <span className="text-muted-foreground ml-2 text-[10px] opacity-50">
-                  [{(concept.weight * 10).toFixed(0)}%]
-                </span>
-              </div>
-              
-              {hoveredConcept === concept.concept && (
-                <div className={cn(
-                  "absolute z-50 top-full mt-1 p-2 bg-card border border-border rounded shadow-xl text-[10px] leading-tight animate-in fade-in slide-in-from-top-1 w-[200px]",
-                  side === 'left' ? 'left-0' : 'right-0'
-                )}>
-                  <div className="text-muted-foreground font-bold mb-1">[SOURCE RECALL]</div>
-                  <div className="italic text-foreground/90 font-mono">"{sourceText}"</div>
+                <div 
+                  className={cn(
+                    "flex items-baseline gap-2 transition-all duration-300 hover:scale-105 hover:opacity-100 hover:brightness-125",
+                    "text-opacity-60",
+                    side === 'left' ? 'flex-row origin-left' : 'flex-row origin-left'
+                  )}
+                  style={{ opacity: 0.5 + (concept.weight / 10) * 0.5 }}
+                >
+                  <span className={cn(
+                    'font-mono font-medium flex-1 min-w-0 text-xs', 
+                    colorClass,
+                    'text-left'
+                  )}>
+                    {concept.concept}
+                  </span>
+                  <span className={cn(
+                    "text-muted-foreground text-[10px] opacity-40 group-hover:opacity-80 transition-opacity font-mono shrink-0 w-[42px]",
+                    'text-right'
+                  )}>
+                    [{(concept.weight * 10).toFixed(0)}%]
+                  </span>
                 </div>
-              )}
-            </div>
-          ))
+                
+                {hoveredConcept === concept.concept && hasValidSource && (
+                  <div className={cn(
+                    "absolute z-50 top-full mt-1 p-2 bg-card border border-border rounded shadow-2xl text-[10px] leading-tight animate-in fade-in slide-in-from-top-1 w-[220px] font-mono",
+                    side === 'left' ? 'left-0' : 'right-0'
+                  )}>
+                    <div className="text-muted-foreground font-bold mb-1 opacity-50 uppercase tracking-widest">[SOURCE RECALL]</div>
+                    <div className="italic text-foreground/90 leading-normal">"{sourceText}"</div>
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
     </div>

@@ -159,14 +159,47 @@ class MemoryGraph:
         """
         if self.model is not None and self.tokenizer is not None:
             concept = self._curation_pass(generated_text)
-            if concept:
-                phrases = [concept]
-            else:
-                phrases = _extract_salient_phrases(generated_text)[:3]
+            phrases = [concept] if concept else _extract_salient_phrases(generated_text)[:3]
         else:
-            phrases = _extract_salient_phrases(generated_text)
-
+            phrases = _extract_salient_phrases(generated_text)[:3]
+        
         return self.remember_phrases(phrases, source_text=generated_text)
+
+    def remember_phrases(self, phrases: list[str], source_text: str = "") -> list[str]:
+        """Add concepts to the graph and sync to persistent tiers.
+        
+        This handles the core 'memory' logic: boosting reinforced concepts,
+        decaying old ones, and archiving everything with its original context.
+        """
+        added = []
+        for p in phrases:
+            p = p.strip().lower()
+            if not p:
+                continue
+            
+            # Boost existing concept or initialize new one
+            if p in self._concepts:
+                # Reinforcement makes it harder to forget (cap at 1.0)
+                self._concepts[p] = min(1.0, self._concepts[p] + 0.15)
+            else:
+                # New concepts enter at a baseline of 0.5
+                self._concepts[p] = 0.5
+                added.append(p)
+
+        # Every time we remember something, the entire garden decays slightly
+        # and we prune the weakest links to keep the graph high-salience.
+        if added or phrases:
+            self._decay_all()
+            self._prune()
+            self._save()
+            
+            # 1. Sync the 'active' tier (decaying concept list)
+            self._sync_supabase()
+            
+            # 2. Sync the 'historical' tier (the deep archive)
+            self._sync_archive(phrases, source_text=source_text)
+            
+        return added
 
     def obsessions(self, n: int = 10) -> list[str]:
         """Return the n highest-weight concepts."""
@@ -321,7 +354,7 @@ class MemoryGraph:
         try:
             for phrase in phrases:
                 # Upsert to track the last time this concept was thought of.
-                # Now including source_text for traceability!
+                # Aligning with user's table: occurrence_count, last_thought_at, source_text
                 sb.table("memory_archive").upsert({
                     "bot": self.bot_key,
                     "concept": phrase,
@@ -330,7 +363,6 @@ class MemoryGraph:
                 }, on_conflict="bot,concept").execute()
             log.info(f"[{self.bot_name}] Archived {len(phrases)} concepts with provenance")
         except Exception as e:
-            # Archive failure is usually due to the table/constraint not existing yet
             log.debug(f"[{self.bot_name}] Archive sync withheld: {e}")
 
 

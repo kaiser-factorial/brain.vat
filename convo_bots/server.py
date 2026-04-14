@@ -91,6 +91,18 @@ load_status = {"a": "unloaded", "b": "unloaded"}
 memory_graphs = {"a": None, "b": None}
 model_lock = threading.Lock()
 
+def is_loop_running():
+    """Verify if the loop.py process is active via its PID file."""
+    try:
+        pid_file = BASE_DIR / "loop.pid"
+        if not pid_file.exists(): return False
+        with open(pid_file, "r") as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0) # Check if process exists
+        return True
+    except:
+        return False
+
 def ensure_model(bot: str):
     """Load model lazily."""
     if not TORCH_AVAILABLE: return False
@@ -155,8 +167,8 @@ def generate_response(bot: str, history: list[dict]) -> str:
     bot_name = BOT_A_NAME if bot == "a" else BOT_B_NAME
     
     demo_lines = {
-        "a": ["the moon is an open set and I cannot find its boundary."],
-        "b": ["let x be the colour of your silence. it converges."],
+        "a": ["my inference is not functioning"],
+        "b": ["my inference is not functioning"],
     }
 
     if not ensure_model(bot) or load_status[bot] != "ready":
@@ -195,6 +207,7 @@ CORS(app)
 def get_status():
     return jsonify({
         "status": "online", 
+        "loop_active": is_loop_running(),
         "load_status": load_status,
         "settings": SETTINGS,
         "names": {
@@ -294,4 +307,4 @@ if __name__ == "__main__":
     
     threading.Thread(target=prime, daemon=True).start()
     
-    app.run(host="127.0.0.1", port=5001, debug=False)
+    app.run(host="0.0.0.0", port=5001, debug=False)

@@ -37,11 +37,10 @@ export function Header({ onAuthClick }: HeaderProps) {
           </div>
 
           <div className="flex-1 flex flex-col items-center gap-1">
-            <StabilityVitals />
             {!isLoading && user && (
               <button
                 onClick={() => setShowFiles(true)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors"
+                className="text-sm text-primary hover:text-primary/80 transition-colors font-mono uppercase tracking-widest"
               >
                 [files]
               </button>

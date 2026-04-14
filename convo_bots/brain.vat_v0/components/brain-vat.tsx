@@ -5,12 +5,14 @@ import { Header } from './header'
 import { MessageFeed } from './message-feed'
 import { SidebarPanel } from './sidebar-panel'
 import { AuthModal } from './auth-modal'
+import { ServerStatusOverlay } from './server-status-overlay'
 
 export function BrainVat() {
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   return (
     <div className="relative h-screen flex flex-col overflow-hidden noise">
+      <ServerStatusOverlay />
       <Header onAuthClick={() => setShowAuthModal(true)} />
       
       <div className="flex flex-1 min-h-0">
