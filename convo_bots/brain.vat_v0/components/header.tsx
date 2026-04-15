@@ -5,6 +5,42 @@ import { useAuth } from '@/lib/auth-context'
 import { FileModal } from './file-modal'
 import Link from 'next/link'
 import { StabilityVitals } from './stability-vitals'
+import { useSystemStatus } from '@/lib/system-status-context'
+
+function SystemStatusIndicator() {
+  const { isOnline, isLoopActive } = useSystemStatus()
+  
+  if (!isOnline) {
+    return (
+      <div className="flex items-center gap-2 group cursor-default">
+        <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
+          SYSTEM STATUS: <span className="text-red-900 font-bold">OFFLINE</span> / VIEWING HISTORY
+        </span>
+      </div>
+    )
+  }
+
+  if (!isLoopActive) {
+    return (
+      <div className="flex items-center gap-2 group cursor-default">
+        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
+          SYSTEM STATUS: <span className="text-amber-700 font-bold">IDLE</span> / VIEWING HISTORY
+        </span>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="flex items-center gap-2 group cursor-default">
+      <div className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse" />
+      <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
+        SYSTEM STATUS: <span className="text-terminal-green font-bold">ONLINE</span> / VIEWING LIVE
+      </span>
+    </div>
+  )
+}
 
 interface HeaderProps {
   onAuthClick?: () => void
@@ -37,10 +73,11 @@ export function Header({ onAuthClick }: HeaderProps) {
           </div>
 
           <div className="flex-1 flex flex-col items-center gap-1">
+            <SystemStatusIndicator />
             {!isLoading && user && (
               <button
                 onClick={() => setShowFiles(true)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors font-mono uppercase tracking-widest"
+                className="text-sm text-primary hover:text-primary/80 transition-colors font-mono uppercase tracking-widest mt-1"
               >
                 [files]
               </button>

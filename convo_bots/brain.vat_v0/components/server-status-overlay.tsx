@@ -1,39 +1,22 @@
-'use client'
-
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { useSystemStatus } from '@/lib/system-status-context'
 
 export function ServerStatusOverlay() {
-  const [isDown, setIsDown] = useState(false)
-  const [reason, setReason] = useState<'server' | 'loop' | null>(null)
-
+  const { isOnline, isLoopActive } = useSystemStatus()
+  const [dismissed, setDismissed] = useState(false)
+  
+  // Reset dismissal when system comes back online
   useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch('http://localhost:5001/api/status', { cache: 'no-store' })
-        if (!res.ok) throw new Error('Server issues')
-        
-        const data = await res.json()
-        if (data.loop_active === false) {
-          setIsDown(true)
-          setReason('loop')
-        } else {
-          setIsDown(false)
-          setReason(null)
-        }
-      } catch (err) {
-        setIsDown(true)
-        setReason('server')
-      }
+    if (isOnline && isLoopActive) {
+      setDismissed(false)
     }
+  }, [isOnline, isLoopActive])
 
-    checkStatus()
-    const interval = setInterval(checkStatus, 5000)
-    return () => clearInterval(interval)
-  }, [])
+  if (dismissed || (isOnline && isLoopActive)) return null
 
-  if (!isDown) return null
+  const reason = !isOnline ? 'server' : 'loop'
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md animate-in fade-in duration-500">
@@ -59,6 +42,12 @@ export function ServerStatusOverlay() {
           </div>
 
           <div className="flex items-center gap-6 pt-2">
+            <button 
+              onClick={() => setDismissed(true)}
+              className="text-xs text-terminal-green hover:underline uppercase tracking-widest font-bold"
+            >
+              [dismiss & view history]
+            </button>
             <Link 
               href="/about" 
               className="text-xs text-muted-foreground hover:text-red-500 transition-colors uppercase tracking-widest font-bold"
