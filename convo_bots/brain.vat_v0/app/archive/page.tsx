@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react'
 import { Header } from '@/components/header'
 import { cn } from '@/lib/utils'
+import { useSystemStatus } from '@/lib/system-status-context'
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip'
 
 interface ArchiveRecord {
   id: string
@@ -17,11 +24,13 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true)
   const [hoveredConcept, setHoveredConcept] = useState<{ bot: string, concept: string } | null>(null)
   const [sourceText, setSourceText] = useState<string | null>(null)
+  const { isOnline } = useSystemStatus()
 
   useEffect(() => {
     const fetchArchive = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:5001/api/memory/archive')
+        const res = await fetch('http://localhost:5001/api/memory/archive')
+        if (!res.ok) throw new Error('Offline')
         const data = await res.json()
         setRecords(data)
       } catch (err) {
@@ -43,9 +52,14 @@ export default function ArchivePage() {
 
   const handleMouseEnter = async (bot: string, concept: string) => {
     setHoveredConcept({ bot, concept })
+    if (!isOnline) {
+      setSourceText('(Source unavailable — offline mode)')
+      return
+    }
     setSourceText('recalling...')
     try {
-      const res = await fetch(`http://127.0.0.1:5001/api/memory/source/${bot}/${concept}`)
+      const res = await fetch(`http://localhost:5001/api/memory/source/${bot}/${concept}`)
+      if (!res.ok) throw new Error('Offline')
       const data = await res.json()
       setSourceText(data.source_text)
     } catch (err) {
@@ -70,73 +84,75 @@ export default function ArchivePage() {
             indexing_the_unconscious<span className="cursor-blink">_</span>
           </div>
         ) : (
-          <div className="flex-1 grid grid-cols-3 gap-8 overflow-hidden">
-            
-            {/* Column A: MAUK Exclusive */}
-            <div className="flex flex-col border border-mauk/20 bg-mauk/5 p-4 rounded-sm group">
-              <h2 className="text-mauk text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-mauk mauk-glow animate-pulse" />
-                MAUK / EXCLUSIVE
-              </h2>
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
-                {groupA.map(c => (
-                  <MemoryNode 
-                    key={c} 
-                    concept={c} 
-                    bot="a" 
-                    theme="mauk"
-                    onHover={handleMouseEnter}
-                    isShowing={hoveredConcept?.concept === c}
-                    source={sourceText}
-                  />
-                ))}
+          <TooltipProvider delayDuration={0}>
+            <div className="flex-1 grid grid-cols-3 gap-8 overflow-hidden">
+              
+              {/* Column A: MAUK Exclusive */}
+              <div className="flex flex-col border border-mauk/20 bg-mauk/5 p-4 rounded-sm group">
+                <h2 className="text-mauk text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-mauk mauk-glow animate-pulse" />
+                  MAUK / EXCLUSIVE
+                </h2>
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+                  {groupA.map(c => (
+                    <MemoryNode 
+                      key={c} 
+                      concept={c} 
+                      bot="a" 
+                      theme="mauk"
+                      onHover={handleMouseEnter}
+                      isShowing={hoveredConcept?.concept === c}
+                      source={sourceText}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Column Common: Shared Minds */}
-            <div className="flex flex-col border border-primary/30 bg-primary/5 p-4 rounded-sm shadow-[0_0_20px_rgba(230,57,70,0.1)] text-center">
-              <h2 className="text-primary text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-center">
-                <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                SHARED OBSESSIONS
-                <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
-              </h2>
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
-                {common.map(c => (
-                  <MemoryNode 
-                    key={c} 
-                    concept={c} 
-                    bot="a" // Use bot A's source as default proxy
-                    theme="primary"
-                    onHover={handleMouseEnter}
-                    isShowing={hoveredConcept?.concept === c}
-                    source={sourceText}
-                  />
-                ))}
+              {/* Column Common: Shared Minds */}
+              <div className="flex flex-col border border-primary/30 bg-primary/5 p-4 rounded-sm shadow-[0_0_20px_rgba(230,57,70,0.1)] text-center">
+                <h2 className="text-primary text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-center">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                  SHARED OBSESSIONS
+                  <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                </h2>
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
+                  {common.map(c => (
+                    <MemoryNode 
+                      key={c} 
+                      concept={c} 
+                      bot="a" // Use bot A's source as default proxy
+                      theme="primary"
+                      onHover={handleMouseEnter}
+                      isShowing={hoveredConcept?.concept === c}
+                      source={sourceText}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Column B: ABACI Exclusive */}
-            <div className="flex flex-col border border-abaci/20 bg-abaci/5 p-4 rounded-sm">
-              <h2 className="text-abaci text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-end">
-                ABACI / EXCLUSIVE
-                <div className="w-2 h-2 rounded-full bg-abaci abaci-glow animate-pulse" />
-              </h2>
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin text-right">
-                {groupB.map(c => (
-                  <MemoryNode 
-                    key={c} 
-                    concept={c} 
-                    bot="b" 
-                    theme="abaci"
-                    onHover={handleMouseEnter}
-                    isShowing={hoveredConcept?.concept === c}
-                    source={sourceText}
-                  />
-                ))}
+              {/* Column B: ABACI Exclusive */}
+              <div className="flex flex-col border border-abaci/20 bg-abaci/5 p-4 rounded-sm">
+                <h2 className="text-abaci text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-end">
+                  ABACI / EXCLUSIVE
+                  <div className="w-2 h-2 rounded-full bg-abaci abaci-glow animate-pulse" />
+                </h2>
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin text-right">
+                  {groupB.map(c => (
+                    <MemoryNode 
+                      key={c} 
+                      concept={c} 
+                      bot="b" 
+                      theme="abaci"
+                      onHover={handleMouseEnter}
+                      isShowing={hoveredConcept?.concept === c}
+                      source={sourceText}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
 
-          </div>
+            </div>
+          </TooltipProvider>
         )}
       </main>
     </div>
@@ -144,7 +160,6 @@ export default function ArchivePage() {
 }
 
 function MemoryNode({ concept, bot, theme, onHover, isShowing, source }: any) {
-  // Only show tooltip if we have a real string and it's not a placeholder/error
   const hasValidSource = source && 
                          source !== 'recalling...' && 
                          source !== '(Context lost to time)' && 
@@ -152,30 +167,31 @@ function MemoryNode({ concept, bot, theme, onHover, isShowing, source }: any) {
                          source !== '(Source unavailable — offline mode)'
 
   return (
-    <div 
-      className="relative group cursor-help px-4"
-      onMouseEnter={() => onHover(bot, concept)}
-    >
-      <div className={cn(
-        "text-sm font-mono transition-all duration-300 hover:scale-110",
-        theme === 'mauk' ? 'text-mauk hover:text-mauk/100 text-opacity-70 origin-left' :
-        theme === 'abaci' ? 'text-abaci hover:text-abaci/100 text-opacity-70 origin-right' :
-        'text-primary font-bold animate-pulse origin-center'
-      )}>
-        {concept}
-      </div>
-      
-      {isShowing && hasValidSource && (
-        <div className={cn(
-          "fixed z-[100] p-3 bg-card border border-border rounded-lg shadow-2xl text-[10px] leading-tight w-[240px] pointer-events-none",
-          "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
-        )}>
-          <div className="text-muted-foreground font-bold mb-1 uppercase tracking-widest">[RECALLING FRAGMENT]</div>
-          <div className="italic text-foreground overflow-hidden text-ellipsis line-clamp-4">
-            "{source}"
+    <Tooltip open={isShowing && hasValidSource}>
+      <TooltipTrigger asChild>
+        <div 
+          className="relative group cursor-help px-4"
+          onMouseEnter={() => onHover(bot, concept)}
+        >
+          <div className={cn(
+            "text-sm font-mono transition-all duration-300 hover:scale-110",
+            theme === 'mauk' ? 'text-mauk hover:text-mauk/100 text-opacity-70 origin-left' :
+            theme === 'abaci' ? 'text-abaci hover:text-abaci/100 text-opacity-70 origin-right' :
+            'text-primary font-bold animate-pulse origin-center'
+          )}>
+            {concept}
           </div>
         </div>
-      )}
-    </div>
+      </TooltipTrigger>
+      <TooltipContent 
+        side="top"
+        className="p-3 bg-card border border-border rounded-lg shadow-2xl text-[10px] leading-tight w-[240px] z-[100]"
+      >
+        <div className="text-muted-foreground font-bold mb-1 uppercase tracking-widest">[RECALLING FRAGMENT]</div>
+        <div className="italic text-foreground overflow-hidden text-ellipsis line-clamp-4">
+          "{source}"
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 }

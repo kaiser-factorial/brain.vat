@@ -14,8 +14,8 @@ function SystemStatusIndicator() {
     return (
       <div className="flex items-center gap-2 group cursor-default">
         <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
-          SYSTEM STATUS: <span className="text-red-900 font-bold">OFFLINE</span> / VIEWING HISTORY
+        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase text-red-900 font-bold">
+          SYSTEM STATUS: OFFLINE
         </span>
       </div>
     )
@@ -25,8 +25,8 @@ function SystemStatusIndicator() {
     return (
       <div className="flex items-center gap-2 group cursor-default">
         <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
-          SYSTEM STATUS: <span className="text-amber-700 font-bold">IDLE</span> / VIEWING HISTORY
+        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase text-amber-700 font-bold">
+          SYSTEM STATUS: IDLE
         </span>
       </div>
     )
@@ -35,8 +35,8 @@ function SystemStatusIndicator() {
   return (
     <div className="flex items-center gap-2 group cursor-default">
       <div className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse" />
-      <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
-        SYSTEM STATUS: <span className="text-terminal-green font-bold">ONLINE</span> / VIEWING LIVE
+      <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase text-terminal-green font-bold">
+        SYSTEM STATUS: ONLINE
       </span>
     </div>
   )
