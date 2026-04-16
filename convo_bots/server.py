@@ -13,6 +13,7 @@ import threading
 import logging
 from pathlib import Path
 from datetime import datetime
+import math
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -34,7 +35,15 @@ PROMPT_AUDIT_LOG = BASE_DIR / "prompt_audit.log"
 # ── Root Utility Imports ──────────────────────────────────────────────────────
 # Standardized imports from root convo_bots/ directory
 try:
-    from supabase_utils import fetch_memory_concepts, fetch_workspace_files, get_supabase_client, fetch_bot_settings, update_bot_settings
+    from supabase_utils import (
+        fetch_memory_concepts, 
+        fetch_workspace_files, 
+        get_supabase_client, 
+        fetch_bot_settings, 
+        update_bot_settings,
+        fetch_system_settings,
+        update_system_settings
+    )
     SUPABASE_UTILS_AVAILABLE = True
     sb_client = get_supabase_client()
 except ImportError:
@@ -64,6 +73,28 @@ except ImportError:
     TORCH_AVAILABLE = False
     logging.error("torch/transformers not installed")
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def safe_float(val, default):
+    """Safely convert value to float, handling NaN/Inf and malformed inputs."""
+    try:
+        if val is None: return default
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return f
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(val, default):
+    """Safely convert value to int."""
+    try:
+        if val is None: return default
+        # Handle float strings being cast to int
+        return int(float(val))
+    except (ValueError, TypeError):
+        return default
+
 # ── Config ────────────────────────────────────────────────────────────────────
 MODEL_A_PATH  = os.getenv("MODEL_A_PATH", str(BASE_DIR.parent / "model_checkpoint_mauk_1"))
 MODEL_B_PATH  = os.getenv("MODEL_B_PATH", str(BASE_DIR.parent / "model_checkpoint_abaci_1"))
@@ -92,6 +123,8 @@ tokenizers = {"a": None, "b": None}
 load_status = {"a": "unloaded", "b": "unloaded"}
 memory_graphs = {"a": None, "b": None}
 model_lock = threading.Lock()
+logging_lock = threading.Lock()
+cache_lock = threading.Lock()
 
 def is_loop_running():
     """Verify if the loop.py process is active via its PID file."""
@@ -155,7 +188,11 @@ def ensure_model(bot: str):
         load_status[bot] = "error"
         return False
 
-# ── Dialogue Logic ────────────────────────────────────────────────────────────
+# ── Locks ────────────────────────────────────────────────────────────────────
+model_lock = threading.Lock()
+logging_lock = threading.Lock()
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 def strip_dialogue_prefix(text: str, name: str) -> str:
     pattern = rf"^\s*\[{re.escape(name)}\]:\s*"
@@ -165,18 +202,20 @@ def strip_dialogue_prefix(text: str, name: str) -> str:
         if next_turn != -1: text = text[:next_turn].strip()
     return text
 
-def log_prompt(bot: str, prompt: str, response: str):
-    """Log the raw prompt and response for auditing."""
+def log_prompt(bot: str, prompt: str, response: str, settings: dict = None):
+    """Log the raw prompt and response for auditing with thread-safety."""
     try:
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "bot": bot,
             "bot_name": BOT_A_NAME if bot == "a" else BOT_B_NAME,
+            "settings": settings,
             "prompt": prompt,
             "response": response
         }
-        with open(PROMPT_AUDIT_LOG, "a") as f:
-            f.write(json.dumps(log_entry) + "\n")
+        with logging_lock:
+            with open(PROMPT_AUDIT_LOG, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
     except Exception as e:
         logging.error(f"Failed to log prompt audit: {e}")
 
@@ -207,11 +246,31 @@ def generate_response(bot: str, history: list[dict]) -> str:
             if current:
                 # SAFETY: Clip values to sane ranges to prevent inference crashes
                 if current.get("temperature") is not None:
-                    bot_settings["temperature"] = max(0.1, min(2.0, float(current["temperature"])))
+                    parsed_temp = safe_float(current.get("temperature"), bot_settings["temperature"])
+                    bot_settings["temperature"] = max(0.1, min(2.0, parsed_temp))
+                    
                 if current.get("top_p") is not None:
-                    bot_settings["top_p"] = max(0.01, min(1.0, float(current["top_p"])))
+                    parsed_p = safe_float(current.get("top_p"), bot_settings["top_p"])
+                    bot_settings["top_p"] = max(0.01, min(1.0, parsed_p))
+                
+                # Expand h-params
+                if current.get("repetition_penalty") is not None:
+                    parsed_pen = safe_float(current.get("repetition_penalty"), SETTINGS["repetition_penalty"])
+                    bot_settings["repetition_penalty"] = max(1.0, min(2.5, parsed_pen))
+                    
+                if current.get("max_new_tokens") is not None:
+                    parsed_max = safe_int(current.get("max_new_tokens"), SETTINGS["max_new_tokens"])
+                    bot_settings["max_new_tokens"] = max(10, min(200, parsed_max))
+                
                 bot_settings["banned_words"] = current.get("banned_words", [])
                 logging.info(f"Using DB settings for {bot_name}: {bot_settings}")
+            else:
+                # Fallback to .env defaults if not in DB
+                bot_settings["repetition_penalty"] = SETTINGS["repetition_penalty"]
+                bot_settings["max_new_tokens"] = SETTINGS["max_new_tokens"]
+        else:
+            bot_settings["repetition_penalty"] = SETTINGS["repetition_penalty"]
+            bot_settings["max_new_tokens"] = SETTINGS["max_new_tokens"]
 
         prompt = build_enhanced_dialogue_prompt(history, bot)
         inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
@@ -220,34 +279,41 @@ def generate_response(bot: str, history: list[dict]) -> str:
         # --- BANNED WORDS CACHING ---
         # Cache tokenized banned words to avoid redundant encoding on every turn
         cache_key = f"{bot}:{','.join(bot_settings['banned_words'])}"
-        if not hasattr(generate_response, "_banned_cache"):
-            generate_response._banned_cache = {}
-        
-        if cache_key in generate_response._banned_cache:
-            final_bad_words = generate_response._banned_cache[cache_key]
-        else:
-            bad_words_ids = []
-            eos_id = tokenizers[bot].eos_token_id
-            for word in bot_settings["banned_words"]:
-                if not word: continue
-                ids = tokenizers[bot].encode(word, add_special_tokens=False)
-                if ids:
-                    # SAFETY: Never allow banning the EOS token (prevents infinite loops)
-                    if len(ids) == 1 and ids[0] == eos_id:
-                        continue
-                    bad_words_ids.append(ids)
+        with cache_lock:
+            if not hasattr(generate_response, "_banned_cache"):
+                generate_response._banned_cache = {}
             
-            final_bad_words = bad_words_ids if bad_words_ids else None
-            generate_response._banned_cache[cache_key] = final_bad_words
+            cached_val = generate_response._banned_cache.get(cache_key)
+            if cached_val is not None:
+                final_bad_words = cached_val
+            else:
+                bad_words_ids = []
+                eos_id = tokenizers[bot].eos_token_id
+                for word in bot_settings["banned_words"]:
+                    if not word: continue
+                    ids = tokenizers[bot].encode(word, add_special_tokens=False)
+                    if ids:
+                        # SAFETY: Never allow banning the EOS token (prevents infinite loops)
+                        if len(ids) == 1 and ids[0] == eos_id:
+                            continue
+                        bad_words_ids.append(ids)
+                
+                final_bad_words = bad_words_ids if bad_words_ids else None
+                
+                # MEMORY_SAFETY: Limit cache size to 100 variations to prevent memory bloat
+                if len(generate_response._banned_cache) > 100:
+                    generate_response._banned_cache.clear()
+                    
+                generate_response._banned_cache[cache_key] = final_bad_words
 
         with torch.no_grad():
             output = models[bot].generate(
                 **inputs,
-                max_new_tokens=SETTINGS["max_new_tokens"],
+                max_new_tokens=bot_settings.get("max_new_tokens", SETTINGS["max_new_tokens"]),
                 do_sample=True,
                 temperature=bot_settings["temperature"],
                 top_p=bot_settings["top_p"],
-                repetition_penalty=SETTINGS["repetition_penalty"],
+                repetition_penalty=bot_settings.get("repetition_penalty", SETTINGS["repetition_penalty"]),
                 bad_words_ids=final_bad_words,
                 eos_token_id=tokenizers[bot].eos_token_id,
             )
@@ -256,7 +322,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
         response_text = strip_dialogue_prefix(raw, bot_name)
         
         # AUDIT: Log the interaction
-        log_prompt(bot, prompt, response_text)
+        log_prompt(bot, prompt, response_text, settings=bot_settings)
         
         return response_text
     except Exception as e:
@@ -337,7 +403,10 @@ def admin_settings():
         return jsonify({"error": "Supabase unavailable"}), 503
     
     if request.method == "POST":
-        data = request.json
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "MISSING_OR_INVALID_JSON_PAYLOAD"}), 400
+            
         bot = data.get("bot")
         if bot not in ("a", "b"): abort(400)
         
@@ -345,6 +414,8 @@ def admin_settings():
         settings = {
             "temperature": data.get("temperature"),
             "top_p": data.get("top_p"),
+            "repetition_penalty": data.get("repetition_penalty"),
+            "max_new_tokens": data.get("max_new_tokens"),
             "banned_words": data.get("banned_words", [])
         }
         
@@ -425,6 +496,34 @@ def get_memory_archive():
     except Exception as e:
         logging.error(f"Failed to fetch archive: {e}")
         return jsonify([])
+
+@app.route("/api/admin/system", methods=["GET", "POST"])
+def admin_system_settings():
+    """Manage global system loop settings (sleep, jitter)."""
+    if not SUPABASE_UTILS_AVAILABLE or not sb_client:
+        return jsonify({"error": "Supabase unavailable"}), 503
+    
+    # Check admin secret
+    provided_secret = request.headers.get("X-Admin-Secret")
+    if not provided_secret or provided_secret != os.getenv("ADMIN_SECRET", "31415926535"):
+        abort(401)
+
+    if request.method == "POST":
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "MISSING_JSON"}), 400
+            
+        settings = {
+            "cycle_sleep": safe_int(data.get("cycle_sleep"), 120),
+            "cycle_jitter": safe_int(data.get("cycle_jitter"), 30)
+        }
+        
+        success = update_system_settings(sb_client, settings)
+        return jsonify({"success": success})
+
+    # GET
+    settings = fetch_system_settings(sb_client)
+    return jsonify(settings)
 
 if __name__ == "__main__":
     # Auto-prime models in background to break the wait-loop with loop.py

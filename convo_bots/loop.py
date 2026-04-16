@@ -231,6 +231,18 @@ def main():
     while True:
         cycle += 1
         
+        # ── DYNAMIC SETTINGS POLLING ──────────────────────────────
+        # Fetch latest timing from DB if available, else use args
+        try:
+            r = requests.get(f"{SERVER_URL}/api/admin/system", headers={"X-Admin-Secret": os.getenv("ADMIN_SECRET", "31415926535")}, timeout=10)
+            if r.ok:
+                sys_data = r.json()
+                args.sleep = sys_data.get("cycle_sleep", args.sleep)
+                args.jitter = sys_data.get("cycle_jitter", args.jitter)
+                log.info(f"Dynamic timing synced: Sleep {args.sleep}s, Jitter {args.jitter}s")
+        except Exception as e:
+            log.warning(f"Failed to poll system settings: {e}")
+        
         # Check who spoke last to ensure strictly alternating turns
         last_speaker = "UNKNOWN"
         if sb_client:
@@ -276,14 +288,14 @@ def main():
         if not args.dry_run:
             trigger_generate(next_bot, dry_run=args.dry_run)
             
-        # ── RANDOMIZED THINKING DELAY ─────────────────────────────
-        # Instead of a fixed pause, we wait between 20s and 120s
-        jitter = random.randint(10, 30)
-        wake_at = datetime.fromtimestamp(time.time() + jitter).strftime("%H:%M:%S")
-        log.info(f"Next turn in {jitter}s (at {wake_at})...")
+        # ── ORGANIC THINKING DELAY ─────────────────────────────
+        # Use the configured sleep and jitter to determine wait time
+        wait_time = max(10, args.sleep + random.randint(-args.jitter, args.jitter))
+        wake_at = datetime.fromtimestamp(time.time() + wait_time).strftime("%H:%M:%S")
+        log.info(f"Next turn in {wait_time}s (at {wake_at})...")
 
         if not args.dry_run:
-            time.sleep(jitter)
+            time.sleep(wait_time)
 
         if args.cycles and cycle >= args.cycles:
             log.info(f"Reached {args.cycles} cycle(s). Stopping.")

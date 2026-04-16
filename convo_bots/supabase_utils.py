@@ -23,6 +23,7 @@ def get_supabase_client():
         print("Supabase client not available (supabase package not installed)")
         return None
 
+@fetch_bot_with_retry
 def fetch_memory_concepts(sb_client, bot_id: str) -> List[Dict]:
     """
     Fetch memory concepts for a specific bot from Supabase.
@@ -39,6 +40,7 @@ def fetch_memory_concepts(sb_client, bot_id: str) -> List[Dict]:
         print(f"Error fetching memory concepts: {e}")
         return []
 
+@fetch_bot_with_retry
 def fetch_workspace_files(sb_client, space: str) -> List[Dict]:
     """
     Fetch workspace files from a specific space.
@@ -118,31 +120,102 @@ def get_last_speaker(sb_client) -> Optional[str]:
         print(f"Error fetching last speaker: {e}")
     return None
 
-def fetch_bot_settings(sb_client) -> List[Dict]:
-    """Fetch all bot settings from Supabase."""
-    if not sb_client:
-        return []
-    try:
-        response = sb_client.table("bot_settings").select("*").execute()
-        return response.data if response.data else []
-    except Exception as e:
-        print(f"Error fetching bot settings: {e}")
-        return []
-
 def update_bot_settings(sb_client, bot: str, settings: Dict) -> bool:
-    """Update settings for a specific bot."""
+    """Update settings for a specific bot by archiving the old ones and inserting new ones."""
     if not sb_client:
         return False
     try:
-        sb_client.table("bot_settings").upsert({
+        # Atomic-ish transition: 
+        # 1. Deactivate current active settings for this bot
+        sb_client.table("bot_settings") \
+            .update({"is_active": False}) \
+            .eq("bot", bot) \
+            .eq("is_active", True) \
+            .execute()
+            
+        # 2. Insert new settings as active
+        # The DB Unique Index ensures only ONE can be active at a time
+        payload = {
             "bot": bot,
+            **settings,
+            "is_active": True,
+            "updated_at": datetime.now().isoformat()
+        }
+        sb_client.table("bot_settings").insert(payload).execute()
+        return True
+    except Exception as e:
+        # If deactivation failed to clear all active rows (race condition),
+        # the Unique Index in SQL will stop the insert and throw an error here.
+        print(f"CRITICAL_SYNC_ERROR for {bot}: {e}")
+        return False
+
+def fetch_bot_with_retry(func):
+    """Decorator for simple retry logic on Supabase calls."""
+    def wrapper(*args, **kwargs):
+        for i in range(3): # 3 attempts
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if i == 2: raise e
+                import time
+                time.sleep(1)
+        return None
+    return wrapper
+
+@fetch_bot_with_retry
+def fetch_system_settings(sb_client) -> Dict:
+    """Fetch the single row of global system settings."""
+    if not sb_client:
+        return {"cycle_sleep": 120, "cycle_jitter": 30}
+    try:
+        response = sb_client.table("system_settings").select("*").eq("id", 1).execute()
+        if response.data:
+            return response.data[0]
+    except Exception as e:
+        print(f"Error fetching system settings: {e}")
+    return {"cycle_sleep": 120, "cycle_jitter": 30}
+
+def update_system_settings(sb_client, settings: Dict) -> bool:
+    """Update the global system settings (id=1)."""
+    if not sb_client:
+        return False
+    try:
+        sb_client.table("system_settings").upsert({
+            "id": 1,
             **settings,
             "updated_at": datetime.now().isoformat()
         }).execute()
         return True
     except Exception as e:
-        print(f"Error updating bot settings: {e}")
+        print(f"Error updating system settings: {e}")
         return False
+@fetch_bot_with_retry
+def fetch_bot_settings(sb_client) -> List[Dict]:
+    """Fetch all CURRENT ACTIVE bot settings from Supabase."""
+    if not sb_client:
+        return []
+    try:
+        # Fetch only the rows marked as active, most recent first
+        response = sb_client.table("bot_settings") \
+            .select("*") \
+            .eq("is_active", True) \
+            .order("updated_at", desc=True) \
+            .execute()
+        
+        if not response.data:
+            return []
+            
+        # Optional: In the unlikely event of multiple active rows per bot (race condition),
+        # we filter here to ensure we only return one per bot type.
+        unique_settings = {}
+        for s in response.data:
+            if s["bot"] not in unique_settings:
+                unique_settings[s["bot"]] = s
+        
+        return list(unique_settings.values())
+    except Exception as e:
+        print(f"Error fetching bot settings: {e}")
+        return []
 
 if __name__ == "__main__":
     test_supabase_integration()

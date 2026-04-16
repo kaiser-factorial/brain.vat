@@ -132,3 +132,48 @@ on conflict (space, name) do nothing;
 create index if not exists messages_created_at_idx   on messages (created_at desc);
 create index if not exists memory_bot_weight_idx     on memory_concepts (bot, weight desc);
 create index if not exists files_space_idx           on workspace_files (space);
+
+
+-- ── Bot Settings (Versioned History) ──────────────────────────────────────────
+
+create table if not exists bot_settings (
+  id                  uuid        primary key default gen_random_uuid(),
+  bot                 text        not null check (bot = any (array['a', 'b'])),
+  temperature         float       not null default 0.9,
+  top_p               float       not null default 0.9,
+  repetition_penalty  float       not null default 1.3,
+  max_new_tokens      integer     not null default 55,
+  banned_words        text[]      default '{}',
+  is_active           boolean     default true,
+  updated_at          timestamptz default now()
+);
+
+-- Index for fast lookup of the current active configuration
+create index if not exists bot_settings_active_idx on bot_settings (bot) where (is_active = true);
+
+-- ── Policy: Anyone can read, only service role can update
+alter table bot_settings enable row level security;
+create policy "public read settings" on bot_settings for select using (true);
+
+-- ── System Settings (Global Timing) ─────────────────────────────────────────
+
+create table if not exists system_settings (
+  id                  integer     primary key default 1,
+  cycle_sleep         integer     not null default 120,
+  cycle_jitter        integer     not null default 30,
+  updated_at          timestamptz default now(),
+  constraint single_row check (id = 1) -- Ensure only one global settings row
+);
+
+-- Policy: Anyone can read
+alter table system_settings enable row level security;
+create policy "public read system" on system_settings for select using (true);
+
+-- Initial seed
+insert into system_settings (id, cycle_sleep, cycle_jitter)
+values (1, 120, 30)
+on conflict (id) do nothing;
+
+-- ── Hardening: Ensure only one active setting exists per bot ────────────────
+-- This mathematically prevents the "2 panels per bot" UI duplication error.
+create unique index if not exists unique_active_bot on bot_settings (bot) where (is_active = true);
