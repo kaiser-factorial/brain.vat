@@ -133,8 +133,8 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
         ))}
       </div>
 
-      {/* Sticky Scroll Toggle Overlay */}
-      <div className="absolute bottom-24 right-6 z-10">
+      {/* Sticky Scroll Toggle Overlay - Positioned just above the input */}
+      <div className="flex justify-end px-6 -mb-4 z-10 pointer-events-none">
         <button
           onClick={() => {
             setIsSticky(!isSticky);
@@ -142,11 +142,11 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
                feedRef.current.scrollTop = feedRef.current.scrollHeight;
             }
           }}
-          className={`px-3 py-1.5 border flex items-center gap-2 transition-all duration-300 font-mono text-[9px] uppercase tracking-widest ${
+          className={`px-3 py-1.5 border flex items-center gap-2 transition-all duration-300 font-mono text-[9px] uppercase tracking-widest pointer-events-auto backdrop-blur-md ${
             isSticky 
-              ? 'border-cyan-500 text-cyan-500 bg-black/80 shadow-[0_0_15px_rgba(0,245,255,0.2)]' 
-              : 'border-[#00441b] text-[#00441b] bg-black/40'
-          }`}
+              ? 'border-cyan-500/50 text-cyan-500 bg-black/60 shadow-[0_0_15px_rgba(0,245,255,0.1)]' 
+              : 'border-[#00441b]/50 text-[#00441b] bg-black/40'
+          } hover:border-cyan-500 hover:text-cyan-500`}
         >
           <div className={`w-1.5 h-1.5 rounded-full ${isSticky ? 'bg-cyan-500 animate-pulse' : 'bg-[#00441b]'}`} />
           {isSticky ? 'STICKY: AUTO' : 'STICKY: MANUAL'}

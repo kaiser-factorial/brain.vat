@@ -76,6 +76,7 @@ export default function AdminControlPanel() {
             model_version: existing.model_version ?? defaults.model_version,
             base_sleep: existing.base_sleep ?? defaults.base_sleep,
             base_jitter: existing.base_jitter ?? defaults.base_jitter,
+            top_k: existing.top_k ?? defaults.top_k,
             banned_words: existing.banned_words ?? defaults.banned_words
           }
         }
