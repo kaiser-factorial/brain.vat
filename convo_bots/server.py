@@ -34,7 +34,7 @@ PROMPT_AUDIT_LOG = BASE_DIR / "prompt_audit.log"
 # ── Root Utility Imports ──────────────────────────────────────────────────────
 # Standardized imports from root convo_bots/ directory
 try:
-    from supabase_utils import fetch_memory_concepts, fetch_workspace_files, get_supabase_client
+    from supabase_utils import fetch_memory_concepts, fetch_workspace_files, get_supabase_client, fetch_bot_settings, update_bot_settings
     SUPABASE_UTILS_AVAILABLE = True
     sb_client = get_supabase_client()
 except ImportError:
@@ -194,18 +194,44 @@ def generate_response(bot: str, history: list[dict]) -> str:
         return random.choice(demo_lines[bot])
 
     try:
+        # FETCH SETTINGS from Supabase (Real-time override)
+        bot_settings = {
+            "temperature": SETTINGS["temperature_a"] if bot == "a" else SETTINGS["temperature_b"],
+            "top_p": SETTINGS["top_p"],
+            "banned_words": []
+        }
+        
+        if SUPABASE_UTILS_AVAILABLE and sb_client:
+            all_settings = fetch_bot_settings(sb_client)
+            current = next((s for s in all_settings if s["bot"] == bot), None)
+            if current:
+                if current.get("temperature") is not None:
+                    bot_settings["temperature"] = float(current["temperature"])
+                if current.get("top_p") is not None:
+                    bot_settings["top_p"] = float(current["top_p"])
+                bot_settings["banned_words"] = current.get("banned_words", [])
+                logging.info(f"Using DB settings for {bot_name}: {bot_settings}")
+
         prompt = build_enhanced_dialogue_prompt(history, bot)
         inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
         prompt_len = inputs["input_ids"].shape[1]
+
+        # Convert banned words to IDs
+        bad_words_ids = []
+        for word in bot_settings["banned_words"]:
+            # Match generate.py logic: prefix space variants
+            ids = tokenizers[bot].encode(word, add_prefix_space=False)
+            if ids: bad_words_ids.append(ids)
 
         with torch.no_grad():
             output = models[bot].generate(
                 **inputs,
                 max_new_tokens=SETTINGS["max_new_tokens"],
                 do_sample=True,
-                temperature=SETTINGS["temperature_a"] if bot == "a" else SETTINGS["temperature_b"],
-                top_p=SETTINGS["top_p"],
+                temperature=bot_settings["temperature"],
+                top_p=bot_settings["top_p"],
                 repetition_penalty=SETTINGS["repetition_penalty"],
+                bad_words_ids=bad_words_ids if bad_words_ids else None,
                 eos_token_id=tokenizers[bot].eos_token_id,
             )
 
@@ -281,9 +307,49 @@ def generate(bot):
 
     return jsonify({"speaker": bot_name, "text": text})
 
+@app.route("/api/admin/settings", methods=["GET", "POST"])
+def admin_settings():
+    # Security: Strict ADMIN_SECRET check
+    expected = os.getenv("ADMIN_SECRET")
+    secret = request.headers.get("X-Admin-Secret")
+    
+    if not expected or secret != expected:
+        abort(401)
+        
+    if not SUPABASE_UTILS_AVAILABLE or not sb_client:
+        return jsonify({"error": "Supabase unavailable"}), 503
+    
+    if request.method == "POST":
+        data = request.json
+        bot = data.get("bot")
+        if bot not in ("a", "b"): abort(400)
+        
+        # Strip internal keys from settings
+        settings = {
+            "temperature": data.get("temperature"),
+            "top_p": data.get("top_p"),
+            "banned_words": data.get("banned_words", [])
+        }
+        
+        success = update_bot_settings(sb_client, bot, settings)
+        if success:
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error"}), 500
+
+    # GET
+    settings = fetch_bot_settings(sb_client)
+    return jsonify(settings)
+
 @app.route("/api/admin/audit")
 def get_audit_logs():
     """Retrieve prompt audit logs for the secret dashboard efficiently."""
+    # Security: Strict ADMIN_SECRET check
+    expected = os.getenv("ADMIN_SECRET")
+    secret = request.headers.get("X-Admin-Secret")
+    
+    if not expected or secret != expected:
+        abort(401)
+        
     try:
         if not PROMPT_AUDIT_LOG.exists():
             return jsonify([])

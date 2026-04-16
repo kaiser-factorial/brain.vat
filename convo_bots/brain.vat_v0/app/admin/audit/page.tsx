@@ -24,7 +24,10 @@ export default function AuditDashboard() {
   const fetchLogs = useCallback(async () => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const res = await fetch(`${baseUrl}/api/admin/audit`)
+      const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      const res = await fetch(`${baseUrl}/api/admin/audit`, {
+        headers: { 'X-Admin-Secret': adminSecret }
+      })
       
       if (!res.ok) {
         if (res.status === 404) throw new Error('AUDIT_ENDPOINT_NOT_FOUND_404')

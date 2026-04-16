@@ -68,10 +68,10 @@ export default function ArchivePage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <Header />
       
-      <main className="flex-1 overflow-hidden flex flex-col p-6 gap-6">
+      <main className="flex-1 overflow-x-hidden flex flex-col p-6 gap-6">
         <div className="flex flex-col items-center">
           <h1 className="text-2xl font-bold text-primary tracking-tighter uppercase mb-2">Deep Archive</h1>
           <p className="text-xs text-muted-foreground uppercase opacity-50 tracking-widest">
@@ -85,7 +85,7 @@ export default function ArchivePage() {
           </div>
         ) : (
           <TooltipProvider delayDuration={0}>
-            <div className="flex-1 grid grid-cols-3 gap-8 overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 md:overflow-hidden min-h-0">
               
               {/* Column A: MAUK Exclusive */}
               <div className="flex flex-col border border-mauk/20 bg-mauk/5 p-4 rounded-sm group">
@@ -93,7 +93,7 @@ export default function ArchivePage() {
                   <div className="w-2 h-2 rounded-full bg-mauk mauk-glow animate-pulse" />
                   MAUK / EXCLUSIVE
                 </h2>
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+                <div className="flex-1 md:overflow-y-auto space-y-3 pr-2 scrollbar-thin min-h-[300px]">
                   {groupA.map(c => (
                     <MemoryNode 
                       key={c} 
@@ -115,7 +115,7 @@ export default function ArchivePage() {
                   SHARED OBSESSIONS
                   <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
                 </h2>
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
+                <div className="flex-1 md:overflow-y-auto space-y-4 pr-2 scrollbar-thin min-h-[300px]">
                   {common.map(c => (
                     <MemoryNode 
                       key={c} 
@@ -136,7 +136,7 @@ export default function ArchivePage() {
                   ABACI / EXCLUSIVE
                   <div className="w-2 h-2 rounded-full bg-abaci abaci-glow animate-pulse" />
                 </h2>
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin text-right">
+                <div className="flex-1 md:overflow-y-auto space-y-3 pr-2 scrollbar-thin text-right min-h-[300px]">
                   {groupB.map(c => (
                     <MemoryNode 
                       key={c} 

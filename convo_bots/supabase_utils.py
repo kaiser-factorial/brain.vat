@@ -118,5 +118,31 @@ def get_last_speaker(sb_client) -> Optional[str]:
         print(f"Error fetching last speaker: {e}")
     return None
 
+def fetch_bot_settings(sb_client) -> List[Dict]:
+    """Fetch all bot settings from Supabase."""
+    if not sb_client:
+        return []
+    try:
+        response = sb_client.table("bot_settings").select("*").execute()
+        return response.data if response.data else []
+    except Exception as e:
+        print(f"Error fetching bot settings: {e}")
+        return []
+
+def update_bot_settings(sb_client, bot: str, settings: Dict) -> bool:
+    """Update settings for a specific bot."""
+    if not sb_client:
+        return False
+    try:
+        sb_client.table("bot_settings").upsert({
+            "bot": bot,
+            **settings,
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        return True
+    except Exception as e:
+        print(f"Error updating bot settings: {e}")
+        return False
+
 if __name__ == "__main__":
     test_supabase_integration()
