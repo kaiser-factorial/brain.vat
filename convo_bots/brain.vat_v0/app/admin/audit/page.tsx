@@ -16,20 +16,23 @@ export default function AuditDashboard() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [logs, setLogs] = useState<AuditLog[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [manualSecret, setManualSecret] = useState<string | null>(null)
   const [errorStatus, setErrorStatus] = useState<string | null>(null)
   const [glitchText, setGlitchText] = useState('')
 
   // 1. DATA FETCHING - Uses Env Var for Production Readiness
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (forcedSecret?: string) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       const res = await fetch(`${baseUrl}/api/admin/audit`, {
         headers: { 'X-Admin-Secret': adminSecret }
       })
       
       if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('SECURE_ACCESS_REQUIRED')
+        }
         if (res.status === 404) throw new Error('AUDIT_ENDPOINT_NOT_FOUND_404')
         if (res.status === 500) throw new Error('SERVER_INTERNAL_ERROR_500')
         throw new Error(`COMM_FAILURE_STATUS_${res.status}`)
@@ -38,13 +41,21 @@ export default function AuditDashboard() {
       const data = await res.json()
       setLogs(Array.isArray(data) ? data.reverse() : [])
       setErrorStatus(null) 
+
+      // If we got here, the secret we used is valid
+      if (adminSecret) {
+        setManualSecret(adminSecret)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('brain_vat_admin_secret', adminSecret)
+        }
+      }
     } catch (error: any) {
       console.error('Audit Fetch Error:', error)
       setErrorStatus(error.message || 'UNKNOWN_COMM_ERROR')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [manualSecret])
 
   // 2. ACCESS CONTROL & INITIALIZATION
   useEffect(() => {
@@ -56,9 +67,21 @@ export default function AuditDashboard() {
       return
     }
 
-    // Load logs only if authorized
+    // Try to recover secret from session storage
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('brain_vat_admin_secret')
+      if (saved) {
+        setManualSecret(saved)
+        fetchLogs(saved)
+        return
+      }
+    }
+
     fetchLogs()
-    const interval = setInterval(fetchLogs, 15000)
+    const interval = setInterval(() => {
+      const saved = sessionStorage.getItem('brain_vat_admin_secret')
+      fetchLogs(saved || undefined)
+    }, 15000)
     return () => clearInterval(interval)
   }, [user, authLoading, router, fetchLogs])
 
@@ -109,11 +132,38 @@ export default function AuditDashboard() {
         </button>
       </div>
 
+      {/* Secure Access Prompt fallback */}
+      {errorStatus === 'SECURE_ACCESS_REQUIRED' && (
+        <div className="max-w-xl mx-auto mb-12 border border-[#00ff41] bg-[#001500]/50 p-8 shadow-[0_0_20px_#00ff411a]">
+          <h2 className="text-xs uppercase tracking-[0.4em] mb-6 text-center text-[#99ffaa]">Administrative_Secret_Required</h2>
+          <div className="space-y-4">
+            <input 
+              type="password"
+              placeholder="ENTER_PASSPHRASE..."
+              className="w-full bg-black border border-[#00441b] p-4 text-xs text-center tracking-[0.5em] focus:border-[#00ff41] focus:outline-none transition-all placeholder:text-[#00441b]"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = (e.target as HTMLInputElement).value;
+                  fetchLogs(val);
+                }
+              }}
+            />
+            <p className="text-[9px] text-[#00441b] uppercase text-center tracking-widest leading-relaxed">
+              Historical inference records are strictly isolated. Enter the admin secret to establish a secure handshake.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="grid grid-cols-1 gap-8 max-w-6xl mx-auto">
         {isLoading ? (
           <div className="text-center py-32 animate-pulse tracking-widest text-[#008f11]">
             SYNCHRONIZING_BRAIN_STREAM...
+          </div>
+        ) : errorStatus && errorStatus !== 'SECURE_ACCESS_REQUIRED' ? (
+          <div className="text-center py-32 text-red-900 border border-dashed border-red-900 uppercase text-[10px] tracking-widest">
+            {errorStatus} // HANDSHAKE_TERMINATED
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center py-32 text-[#00441b] border border-dashed border-[#00441b]">

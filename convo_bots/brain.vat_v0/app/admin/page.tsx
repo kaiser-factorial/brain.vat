@@ -18,32 +18,50 @@ export default function AdminControlPanel() {
   const [settings, setSettings] = useState<BotSettings[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState<string | null>(null)
+  const [manualSecret, setManualSecret] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
 
-  const fetchSettings = useCallback(async () => {
+  const fetchSettings = useCallback(async (forcedSecret?: string) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       console.log(`[Admin] Fetching from: ${baseUrl}/api/admin/settings`);
+      
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
         headers: { 'X-Admin-Secret': adminSecret }
       })
+      
       if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('SECURE_ACCESS_REQUIRED');
+        }
         const errorText = await res.text().catch(() => 'UNKNOWN_SERVER_ERROR');
         throw new Error(`FETCH_FAILED_BY_SERVER_${res.status}: ${errorText}`);
       }
+      
       const data = await res.json()
       setSettings(Array.isArray(data) ? data : [])
+      
+      // If we got here, the secret we used is valid
+      if (adminSecret) {
+        setManualSecret(adminSecret)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('brain_vat_admin_secret', adminSecret)
+        }
+      }
+      
+      setMessage(null)
     } catch (error: any) {
       console.error('Settings Fetch Error:', error)
-      // Filter out the scary Supabase lock error
-      if (!error.message?.includes('Lock "lock:sb-')) {
+      if (error.message === 'SECURE_ACCESS_REQUIRED') {
+        setMessage({ text: 'SECURE_ACCESS_REQUIRED // INVALID_OR_MISSING_PASSPHRASE', type: 'error' })
+      } else if (!error.message?.includes('Lock "lock:sb-')) {
         setMessage({ text: error.message || 'COMMUNICATION_FAILURE', type: 'error' })
       }
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [manualSecret])
 
   useEffect(() => {
     if (authLoading) return
@@ -51,6 +69,17 @@ export default function AdminControlPanel() {
       router.replace('/')
       return
     }
+
+    // Try to recover secret from session storage
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('brain_vat_admin_secret')
+      if (saved) {
+        setManualSecret(saved)
+        fetchSettings(saved)
+        return
+      }
+    }
+
     fetchSettings()
   }, [user, authLoading, router, fetchSettings])
 
@@ -63,7 +92,8 @@ export default function AdminControlPanel() {
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      const adminSecret = manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
         method: 'POST',
         headers: { 
@@ -76,7 +106,7 @@ export default function AdminControlPanel() {
       if (!res.ok) throw new Error('SAVE_FAILED')
       
       setMessage({ text: `BOT_${botKey.toUpperCase()}_HYPERPARAMETERS_SYNCED`, type: 'success' })
-      fetchSettings() // Refresh to get the new timestamp
+      fetchSettings()
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
       setMessage({ text: 'SYNC_FAILURE_DETECTION', type: 'error' })
@@ -91,10 +121,13 @@ export default function AdminControlPanel() {
     ))
   }
 
-  if (authLoading || isLoading) {
+  if (authLoading || (isLoading && !message)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black font-mono text-terminal-green text-xs tracking-widest uppercase">
-        <div className="animate-pulse">Accessing_Encrypted_Core...</div>
+      <div className="flex min-h-screen items-center justify-center bg-black font-mono text-terminal-green text-xs tracking-widest uppercase text-center p-8">
+        <div className="space-y-4">
+          <div className="animate-pulse">Accessing_Encrypted_Core...</div>
+          <div className="text-[10px] text-[#00441b] opacity-50 tracking-tighter">ESTABLISHING_TLS_HANDSHAKE</div>
+        </div>
       </div>
     )
   }
@@ -130,7 +163,29 @@ export default function AdminControlPanel() {
         </div>
       </div>
 
-      {message && (
+      {message?.text.includes('SECURE_ACCESS_REQUIRED') && (
+        <div className="max-w-xl mx-auto mb-12 border border-[#00ff41] bg-[#001500]/50 p-8 shadow-[0_0_20px_#00ff411a]">
+          <h2 className="text-xs uppercase tracking-[0.4em] mb-6 text-center text-[#99ffaa]">Administrative_Secret_Required</h2>
+          <div className="space-y-4">
+            <input 
+              type="password"
+              placeholder="ENTER_PASSPHRASE..."
+              className="w-full bg-black border border-[#00441b] p-4 text-xs text-center tracking-[0.5em] focus:border-[#00ff41] focus:outline-none transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = (e.target as HTMLInputElement).value;
+                  fetchSettings(val);
+                }
+              }}
+            />
+            <p className="text-[9px] text-[#00441b] uppercase text-center tracking-widest leading-relaxed">
+              Inference core endpoints are strictly isolated. Enter the admin secret to establish a secure handshake.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {message && !message.text.includes('SECURE_ACCESS_REQUIRED') && (
         <div className={`max-w-5xl mx-auto mb-8 p-3 text-[10px] uppercase tracking-[0.2em] text-center border ${message.type === 'success' ? 'border-terminal-green bg-terminal-green/5 text-terminal-green' : 'border-red-500 bg-red-500/5 text-red-500'} animate-in fade-in slide-in-from-top-4 duration-500`}>
           {message.text}
         </div>

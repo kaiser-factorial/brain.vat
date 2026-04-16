@@ -205,10 +205,11 @@ def generate_response(bot: str, history: list[dict]) -> str:
             all_settings = fetch_bot_settings(sb_client)
             current = next((s for s in all_settings if s["bot"] == bot), None)
             if current:
+                # SAFETY: Clip values to sane ranges to prevent inference crashes
                 if current.get("temperature") is not None:
-                    bot_settings["temperature"] = float(current["temperature"])
+                    bot_settings["temperature"] = max(0.1, min(2.0, float(current["temperature"])))
                 if current.get("top_p") is not None:
-                    bot_settings["top_p"] = float(current["top_p"])
+                    bot_settings["top_p"] = max(0.01, min(1.0, float(current["top_p"])))
                 bot_settings["banned_words"] = current.get("banned_words", [])
                 logging.info(f"Using DB settings for {bot_name}: {bot_settings}")
 
@@ -216,16 +217,28 @@ def generate_response(bot: str, history: list[dict]) -> str:
         inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
         prompt_len = inputs["input_ids"].shape[1]
 
-        # Convert banned words to IDs
-        bad_words_ids = []
-        for word in bot_settings["banned_words"]:
-            # Encode each word. Note: we omit add_prefix_space as it's not supported by all tokenizers;
-            # the user can include leading spaces in their words if they need differentiation.
-            ids = tokenizers[bot].encode(word)
-            if ids: 
-                # encode() usually returns a list [id1, id2...]. 
-                # generate() expects bad_words_ids to be a list of lists.
-                bad_words_ids.append(ids)
+        # --- BANNED WORDS CACHING ---
+        # Cache tokenized banned words to avoid redundant encoding on every turn
+        cache_key = f"{bot}:{','.join(bot_settings['banned_words'])}"
+        if not hasattr(generate_response, "_banned_cache"):
+            generate_response._banned_cache = {}
+        
+        if cache_key in generate_response._banned_cache:
+            final_bad_words = generate_response._banned_cache[cache_key]
+        else:
+            bad_words_ids = []
+            eos_id = tokenizers[bot].eos_token_id
+            for word in bot_settings["banned_words"]:
+                if not word: continue
+                ids = tokenizers[bot].encode(word, add_special_tokens=False)
+                if ids:
+                    # SAFETY: Never allow banning the EOS token (prevents infinite loops)
+                    if len(ids) == 1 and ids[0] == eos_id:
+                        continue
+                    bad_words_ids.append(ids)
+            
+            final_bad_words = bad_words_ids if bad_words_ids else None
+            generate_response._banned_cache[cache_key] = final_bad_words
 
         with torch.no_grad():
             output = models[bot].generate(
@@ -235,7 +248,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 temperature=bot_settings["temperature"],
                 top_p=bot_settings["top_p"],
                 repetition_penalty=SETTINGS["repetition_penalty"],
-                bad_words_ids=bad_words_ids if bad_words_ids else None,
+                bad_words_ids=final_bad_words,
                 eos_token_id=tokenizers[bot].eos_token_id,
             )
 
