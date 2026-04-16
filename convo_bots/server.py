@@ -375,7 +375,14 @@ def get_audit_logs():
         with open(PROMPT_AUDIT_LOG, "r") as f:
             last_lines = deque(f, 50)
             
-        logs = [json.loads(line) for line in last_lines if line.strip()]
+        logs = []
+        for line in last_lines:
+            if not line.strip(): continue
+            try:
+                logs.append(json.loads(line))
+            except (json.JSONDecodeError, ValueError):
+                # Skip corrupted or partial lines gracefully
+                continue
         return jsonify(logs)
     except Exception as e:
         logging.error(f"Audit fetch failed: {e}")
