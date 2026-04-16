@@ -16,6 +16,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
+from collections import deque
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -28,6 +29,7 @@ load_dotenv()
 BASE_DIR      = Path(__file__).parent
 WORKSPACE_DIR = BASE_DIR / "workspace"
 MEMORY_DIR    = BASE_DIR / "memory"
+PROMPT_AUDIT_LOG = BASE_DIR / "prompt_audit.log"
 
 # ── Root Utility Imports ──────────────────────────────────────────────────────
 # Standardized imports from root convo_bots/ directory
@@ -163,6 +165,21 @@ def strip_dialogue_prefix(text: str, name: str) -> str:
         if next_turn != -1: text = text[:next_turn].strip()
     return text
 
+def log_prompt(bot: str, prompt: str, response: str):
+    """Log the raw prompt and response for auditing."""
+    try:
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "bot": bot,
+            "bot_name": BOT_A_NAME if bot == "a" else BOT_B_NAME,
+            "prompt": prompt,
+            "response": response
+        }
+        with open(PROMPT_AUDIT_LOG, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception as e:
+        logging.error(f"Failed to log prompt audit: {e}")
+
 def generate_response(bot: str, history: list[dict]) -> str:
     bot_name = BOT_A_NAME if bot == "a" else BOT_B_NAME
     
@@ -193,7 +210,12 @@ def generate_response(bot: str, history: list[dict]) -> str:
             )
 
         raw = tokenizers[bot].decode(output[0][prompt_len:], skip_special_tokens=True)
-        return strip_dialogue_prefix(raw, bot_name)
+        response_text = strip_dialogue_prefix(raw, bot_name)
+        
+        # AUDIT: Log the interaction
+        log_prompt(bot, prompt, response_text)
+        
+        return response_text
     except Exception as e:
         logging.error(f"Generation failed: {e}")
         return "(silence)"
@@ -258,6 +280,23 @@ def generate(bot):
         threading.Thread(target=curate_task, args=(text, memory_graphs[bot]), daemon=True).start()
 
     return jsonify({"speaker": bot_name, "text": text})
+
+@app.route("/api/admin/audit")
+def get_audit_logs():
+    """Retrieve prompt audit logs for the secret dashboard efficiently."""
+    try:
+        if not PROMPT_AUDIT_LOG.exists():
+            return jsonify([])
+        
+        # Memory-efficient read of the last 50 lines
+        with open(PROMPT_AUDIT_LOG, "r") as f:
+            last_lines = deque(f, 50)
+            
+        logs = [json.loads(line) for line in last_lines if line.strip()]
+        return jsonify(logs)
+    except Exception as e:
+        logging.error(f"Audit fetch failed: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/memory/source/<bot>/<concept>")
 def get_memory_source(bot, concept):

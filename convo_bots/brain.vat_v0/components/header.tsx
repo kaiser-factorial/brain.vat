@@ -70,6 +70,13 @@ export function Header({ onAuthClick }: HeaderProps) {
                 [archive]
               </span>
             </Link>
+            {user?.email === 'kaiser.factorial@gmail.com' && (
+              <Link href="/admin/audit">
+                <span className="text-[10px] text-muted-foreground opacity-20 hover:opacity-100 transition-opacity cursor-pointer">
+                  [audit]
+                </span>
+              </Link>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col items-center gap-1">
