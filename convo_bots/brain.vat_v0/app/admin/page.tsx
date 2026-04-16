@@ -11,6 +11,7 @@ interface BotSettings {
   repetition_penalty: number
   max_new_tokens: number
   banned_words: string[]
+  model_version: string
   updated_at?: string
 }
 
@@ -59,7 +60,8 @@ export default function AdminControlPanel() {
       const sanitized = (Array.isArray(data) ? data : []).map(s => ({
         ...s,
         repetition_penalty: s.repetition_penalty ?? 1.3,
-        max_new_tokens: s.max_new_tokens ?? 55
+        max_new_tokens: s.max_new_tokens ?? 55,
+        model_version: s.model_version ?? 'v1'
       }))
       setSettings(sanitized)
       setSystemSettings(sysData)
@@ -352,6 +354,21 @@ export default function AdminControlPanel() {
             </div>
 
             <div className="p-8 space-y-8">
+              {/* Model Version */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Model Version</label>
+                  <span className="text-[10px] text-terminal-green/60 font-mono select-none">Iteration_ID</span>
+                </div>
+                <input 
+                  type="text"
+                  value={botSettings.model_version || 'v1'}
+                  onChange={(e) => updateBotField(botSettings.bot, 'model_version', e.target.value)}
+                  placeholder="e.g. v1, v2-experimental"
+                  className="w-full bg-black border border-[#002200] px-4 py-2 text-xs text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors font-mono"
+                />
+              </div>
+
               {/* Temperature */}
               <div className="space-y-4">
                 <div className="flex justify-between items-end">

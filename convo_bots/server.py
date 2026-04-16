@@ -237,7 +237,10 @@ def generate_response(bot: str, history: list[dict]) -> str:
         bot_settings = {
             "temperature": SETTINGS["temperature_a"] if bot == "a" else SETTINGS["temperature_b"],
             "top_p": SETTINGS["top_p"],
-            "banned_words": []
+            "repetition_penalty": SETTINGS["repetition_penalty"],
+            "max_new_tokens": SETTINGS["max_new_tokens"],
+            "banned_words": [],
+            "model_version": "v1"
         }
         
         if SUPABASE_UTILS_AVAILABLE and sb_client:
@@ -263,6 +266,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
                     bot_settings["max_new_tokens"] = max(10, min(200, parsed_max))
                 
                 bot_settings["banned_words"] = current.get("banned_words", [])
+                bot_settings["model_version"] = current.get("model_version", "v1")
                 logging.info(f"Using DB settings for {bot_name}: {bot_settings}")
             else:
                 # Fallback to .env defaults if not in DB
@@ -336,16 +340,36 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type"
 
 @app.route("/api/status")
 def get_status():
-    return jsonify({
+    # Start with static defaults
+    payload = {
         "status": "online", 
         "loop_active": is_loop_running(),
         "load_status": load_status,
-        "settings": SETTINGS,
+        "settings": SETTINGS.copy(),
         "names": {
             "a": BOT_A_NAME,
             "b": BOT_B_NAME
         }
-    })
+    }
+    
+    # Merge dynamic settings if available
+    if SUPABASE_UTILS_AVAILABLE and sb_client:
+        try:
+            db_settings = fetch_bot_settings(sb_client)
+            for s in db_settings:
+                if s["bot"] == "a":
+                    payload["settings"]["temperature_a"] = s.get("temperature", SETTINGS["temperature_a"])
+                elif s["bot"] == "b":
+                    payload["settings"]["temperature_b"] = s.get("temperature", SETTINGS["temperature_b"])
+                
+                # Update top_p (using bot A as the global reference if needed, 
+                # or just the last found)
+                if s.get("top_p") is not None:
+                    payload["settings"]["top_p"] = s["top_p"]
+        except Exception as e:
+            logging.error(f"Failed to fetch dynamic settings for status: {e}")
+            
+    return jsonify(payload)
 
 @app.route("/api/generate/<bot>", methods=["POST"])
 def generate(bot):
@@ -416,7 +440,8 @@ def admin_settings():
             "top_p": data.get("top_p"),
             "repetition_penalty": data.get("repetition_penalty"),
             "max_new_tokens": data.get("max_new_tokens"),
-            "banned_words": data.get("banned_words", [])
+            "banned_words": data.get("banned_words", []),
+            "model_version": data.get("model_version", "v1")
         }
         
         success = update_bot_settings(sb_client, bot, settings)

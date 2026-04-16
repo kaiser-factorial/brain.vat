@@ -11,6 +11,19 @@ from datetime import datetime
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
+def fetch_bot_with_retry(func):
+    """Decorator for simple retry logic on Supabase calls."""
+    def wrapper(*args, **kwargs):
+        for i in range(3): # 3 attempts
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if i == 2: raise e
+                import time
+                time.sleep(1)
+        return None
+    return wrapper
+
 def get_supabase_client():
     """Initialize and return a Supabase client if configuration is available."""
     if not SUPABASE_URL or not SUPABASE_KEY:
@@ -149,18 +162,6 @@ def update_bot_settings(sb_client, bot: str, settings: Dict) -> bool:
         print(f"CRITICAL_SYNC_ERROR for {bot}: {e}")
         return False
 
-def fetch_bot_with_retry(func):
-    """Decorator for simple retry logic on Supabase calls."""
-    def wrapper(*args, **kwargs):
-        for i in range(3): # 3 attempts
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                if i == 2: raise e
-                import time
-                time.sleep(1)
-        return None
-    return wrapper
 
 @fetch_bot_with_retry
 def fetch_system_settings(sb_client) -> Dict:
