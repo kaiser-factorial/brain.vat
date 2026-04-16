@@ -15,6 +15,7 @@ interface BotSettings {
   model_version: string
   base_sleep: number
   base_jitter: number
+  top_k: number
   updated_at?: string
 }
 
@@ -57,7 +58,8 @@ export default function AdminControlPanel() {
         banned_words: [],
         model_version: 'v1',
         base_sleep: 120,
-        base_jitter: 30
+        base_jitter: 30,
+        top_k: 0
       }
 
       // Ensure settings have defaults for new fields if DB columns are missing
@@ -444,8 +446,26 @@ export default function AdminControlPanel() {
                   className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
                 />
                 <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
-                  <span>Brief</span>
-                  <span>Expansive</span>
+                  <span>Concise</span>
+                  <span>Verbose</span>
+                </div>
+              </div>
+
+              {/* Top-K */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Top-K (Entropy Floor)</label>
+                  <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.top_k === 0 ? 'FULL_CHAOS' : botSettings.top_k}</span>
+                </div>
+                <input 
+                  type="range" min="0" max="100" step="1"
+                  value={botSettings.top_k || 0}
+                  onChange={(e) => updateBotField(botSettings.bot, 'top_k', parseInt(e.target.value))}
+                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
+                />
+                <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
+                  <span>Unleashed</span>
+                  <span>Focused</span>
                 </div>
               </div>
 

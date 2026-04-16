@@ -17,6 +17,7 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isSticky, setIsSticky] = useState(true)
   const feedRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const { user, displayName } = useAuth()
@@ -67,11 +68,12 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
     }
   }, [supabase])
 
+  // Scroll to bottom effect
   useEffect(() => {
-    if (feedRef.current) {
+    if (isSticky && feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages, isSticky])
 
   const handleSendMessage = async (text: string) => {
     if (!user) return
@@ -95,10 +97,10 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col relative group">
       <div
         ref={feedRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3"
+        className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth"
       >
         {isLoading && (
           <div className="flex flex-col items-center justify-center h-full opacity-40 animate-pulse font-mono text-xs uppercase tracking-[0.2em] space-y-2">
@@ -129,6 +131,26 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
+      </div>
+
+      {/* Sticky Scroll Toggle Overlay */}
+      <div className="absolute bottom-24 right-6 z-10">
+        <button
+          onClick={() => {
+            setIsSticky(!isSticky);
+            if (!isSticky && feedRef.current) {
+               feedRef.current.scrollTop = feedRef.current.scrollHeight;
+            }
+          }}
+          className={`px-3 py-1.5 border flex items-center gap-2 transition-all duration-300 font-mono text-[9px] uppercase tracking-widest ${
+            isSticky 
+              ? 'border-cyan-500 text-cyan-500 bg-black/80 shadow-[0_0_15px_rgba(0,245,255,0.2)]' 
+              : 'border-[#00441b] text-[#00441b] bg-black/40'
+          }`}
+        >
+          <div className={`w-1.5 h-1.5 rounded-full ${isSticky ? 'bg-cyan-500 animate-pulse' : 'bg-[#00441b]'}`} />
+          {isSticky ? 'STICKY: AUTO' : 'STICKY: MANUAL'}
+        </button>
       </div>
 
       <MessageInput 

@@ -109,6 +109,7 @@ SETTINGS = {
     "top_p":              float(os.getenv("TOP_P", 0.95)),
     "repetition_penalty": float(os.getenv("REPETITION_PENALTY", 1.30)),
     "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS", 60)),
+    "top_k":              int(os.getenv("TOP_K", 0)), # 0 = disabled (Full Chaos)
 }
 
 # ── Device Setup ─────────────────────────────────────────────────────────────
@@ -255,6 +256,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
             "top_p": SETTINGS["top_p"],
             "repetition_penalty": SETTINGS["repetition_penalty"],
             "max_new_tokens": SETTINGS["max_new_tokens"],
+            "top_k": SETTINGS["top_k"],
             "banned_words": [],
             "model_version": "v1",
             "base_sleep": 120,
@@ -278,6 +280,9 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 if current.get("repetition_penalty") is not None:
                     parsed_pen = safe_float(current.get("repetition_penalty"), SETTINGS["repetition_penalty"])
                     bot_settings["repetition_penalty"] = max(1.0, min(2.5, parsed_pen))
+                    
+                if current.get("top_k") is not None:
+                    bot_settings["top_k"] = safe_int(current.get("top_k"), SETTINGS["top_k"])
                     
                 if current.get("max_new_tokens") is not None:
                     parsed_max = safe_int(current.get("max_new_tokens"), SETTINGS["max_new_tokens"])
@@ -341,6 +346,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 do_sample=True,
                 temperature=bot_settings["temperature"],
                 top_p=bot_settings["top_p"],
+                top_k=bot_settings.get("top_k", 0),
                 repetition_penalty=bot_settings.get("repetition_penalty", SETTINGS["repetition_penalty"]),
                 bad_words_ids=final_bad_words,
                 eos_token_id=tokenizers[bot].eos_token_id,
@@ -473,6 +479,7 @@ def admin_settings():
         settings = {
             "temperature": data.get("temperature"),
             "top_p": data.get("top_p"),
+            "top_k": data.get("top_k"),
             "repetition_penalty": data.get("repetition_penalty"),
             "max_new_tokens": data.get("max_new_tokens"),
             "banned_words": banned_clean,
