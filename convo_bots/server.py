@@ -315,12 +315,16 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 eos_id = tokenizers[bot].eos_token_id
                 for word in bot_settings["banned_words"]:
                     if not word: continue
-                    ids = tokenizers[bot].encode(word, add_special_tokens=False)
-                    if ids:
-                        # SAFETY: Never allow banning the EOS token (prevents infinite loops)
-                        if len(ids) == 1 and ids[0] == eos_id:
-                            continue
-                        bad_words_ids.append(ids)
+                    # Smart-Ban: Handle both the raw word and its space-prefixed variant
+                    # This covers 'iced' at the start of a sentence AND ' iced' in the middle.
+                    for variant in [word, f" {word}"]:
+                        ids = tokenizers[bot].encode(variant, add_special_tokens=False)
+                        if ids:
+                            # SAFETY: Never allow banning the EOS token
+                            if len(ids) == 1 and ids[0] == eos_id:
+                                continue
+                            if ids not in bad_words_ids:
+                                bad_words_ids.append(ids)
                 
                 final_bad_words = bad_words_ids if bad_words_ids else None
                 
@@ -567,21 +571,11 @@ def admin_system_settings():
         abort(401)
 
     if request.method == "POST":
-        data = request.get_json(silent=True)
-        if not data:
-            return jsonify({"error": "MISSING_JSON"}), 400
-            
-        settings = {
-            "cycle_sleep": safe_int(data.get("cycle_sleep"), 120),
-            "cycle_jitter": safe_int(data.get("cycle_jitter"), 30)
-        }
-        
-        success = update_system_settings(sb_client, settings)
-        return jsonify({"success": success})
+        # Legacy: Still accept POST to avoid 404s, but don't do anything
+        return jsonify({"success": True, "message": "DEPRECATED_IN_FAVOR_OF_PER_BOT_TIMING"})
 
-    # GET
-    settings = fetch_system_settings(sb_client)
-    return jsonify(settings)
+    # GET: Return static defaults so the frontend doesn't crash
+    return jsonify({"cycle_sleep": 120, "cycle_jitter": 30})
 
 if __name__ == "__main__":
     # Auto-prime models in background to break the wait-loop with loop.py

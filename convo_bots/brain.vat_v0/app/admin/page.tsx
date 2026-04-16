@@ -18,21 +18,13 @@ interface BotSettings {
   updated_at?: string
 }
 
-interface SystemSettings {
-  cycle_sleep: number
-  cycle_jitter: number
-  updated_at?: string
-}
-
 export default function AdminControlPanel() {
   const { user, isLoading: authLoading } = useAuth()
   const { loopDetails } = useSystemStatus()
   const router = useRouter()
   const [settings, setSettings] = useState<BotSettings[]>([])
-  const [systemSettings, setSystemSettings] = useState<SystemSettings>({ cycle_sleep: 120, cycle_jitter: 30 })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState<string | null>(null)
-  const [isSavingSystem, setIsSavingSystem] = useState(false)
   const [manualSecret, setManualSecret] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
   const [criticalError, setCriticalError] = useState<string | null>(null)
@@ -47,20 +39,14 @@ export default function AdminControlPanel() {
         headers: { 'X-Admin-Secret': adminSecret }
       })
       
-      // Fetch System Settings
-      const sysRes = await fetch(`${baseUrl}/api/admin/system`, {
-        headers: { 'X-Admin-Secret': adminSecret }
-      })
-      
-      if (!res.ok || !sysRes.ok) {
-        if (res.status === 401 || sysRes.status === 401) {
+      if (!res.ok) {
+        if (res.status === 401) {
           throw new Error('SECURE_ACCESS_REQUIRED');
         }
         throw new Error('FETCH_FAILED_BY_SERVER');
       }
       
       const data = await res.json()
-      const sysData = await sysRes.json()
 
       // Define default settings for any missing bots
       const defaults = {
@@ -96,7 +82,6 @@ export default function AdminControlPanel() {
       })
 
       setSettings(finalSettings)
-      setSystemSettings(sysData)
       
       // If we got here, the secret we used is valid
       if (adminSecret) {
@@ -150,13 +135,24 @@ export default function AdminControlPanel() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
       const adminSecret = manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       
+      // Clean up the data before sending (deduplicate, remove empty)
+      // NOTE: We no longer .trim() so that the user can manually include spaces if needed,
+      // although the server now handles space-prefixes automatically.
+      const cleanedSettings = {
+        ...botSettings,
+        banned_words: Array.from(new Set(
+          botSettings.banned_words
+            .filter(w => w !== "")
+        ))
+      }
+
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'X-Admin-Secret': adminSecret
         },
-        body: JSON.stringify(botSettings)
+        body: JSON.stringify(cleanedSettings)
       })
 
       if (!res.ok) throw new Error('SAVE_FAILED')
@@ -171,43 +167,10 @@ export default function AdminControlPanel() {
     }
   }
 
-  const handleSystemUpdate = async () => {
-    setIsSavingSystem(true)
-    setMessage(null)
-
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const adminSecret = manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
-      
-      const res = await fetch(`${baseUrl}/api/admin/system`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Admin-Secret': adminSecret
-        },
-        body: JSON.stringify(systemSettings)
-      })
-
-      if (!res.ok) throw new Error('SYSTEM_SYNC_FAILED')
-      
-      setMessage({ text: 'SYSTEM_TIMING_PARAMETERS_SYNCED', type: 'success' })
-      fetchSettings()
-      setTimeout(() => setMessage(null), 3000)
-    } catch (error) {
-      setMessage({ text: 'SYSTEM_SYNC_FAILURE', type: 'error' })
-    } finally {
-      setIsSavingSystem(false)
-    }
-  }
-
   const updateBotField = (botKey: string, field: keyof BotSettings, value: any) => {
     setSettings(prev => prev.map(s => 
       s.bot === botKey ? { ...s, [field]: value } : s
     ))
-  }
-
-  const updateSystemField = (field: keyof SystemSettings, value: any) => {
-    setSystemSettings(prev => ({ ...prev, [field]: value }))
   }
 
   if (authLoading || (isLoading && !message)) {
@@ -319,66 +282,7 @@ export default function AdminControlPanel() {
 
       {/* System Loop Timing Section */}
       {manualSecret && !isLoading && (
-        <div className="max-w-5xl mx-auto mb-12">
-          <div className="border border-[#00441b] bg-[#000800] p-6 rounded-sm shadow-2xl relative group">
-            <div className="flex justify-between items-center mb-8 border-b border-[#002200] pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_8px_#0088ff] animate-pulse" />
-                <h3 className="text-sm font-bold tracking-[0.3em] text-cyan-500">SYSTEM_LOOP_TIMING</h3>
-              </div>
-              <button 
-                onClick={handleSystemUpdate}
-                disabled={isSavingSystem}
-                className="text-[10px] border border-cyan-500 text-cyan-500 px-6 py-1 hover:bg-cyan-500 hover:text-black transition-all font-bold disabled:opacity-50"
-              >
-                {isSavingSystem ? 'SYNCING_CORE...' : 'UPDATE_SYSTEM_CLOCK'}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-              {/* Cycle Sleep */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Base Cycle Interval (Sleep)</label>
-                  <span className="text-xs text-cyan-400 tabular-nums">{systemSettings.cycle_sleep}s</span>
-                </div>
-                <input 
-                  type="range" min="10" max="600" step="10"
-                  value={systemSettings.cycle_sleep}
-                  onChange={(e) => updateSystemField('cycle_sleep', parseInt(e.target.value))}
-                  className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-cyan-900 font-bold uppercase tracking-tighter">
-                  <span>Fast_Dialogue</span>
-                  <span>Deep_Processing</span>
-                </div>
-              </div>
-
-              {/* Cycle Jitter */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Temporal Variance (Jitter)</label>
-                  <span className="text-xs text-cyan-400 tabular-nums">±{systemSettings.cycle_jitter}s</span>
-                </div>
-                <input 
-                  type="range" min="0" max="120" step="5"
-                  value={systemSettings.cycle_jitter}
-                  onChange={(e) => updateSystemField('cycle_jitter', parseInt(e.target.value))}
-                  className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-400 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-cyan-900 font-bold uppercase tracking-tighter">
-                  <span>Precise</span>
-                  <span>Organic_Jitter</span>
-                </div>
-              </div>
-            </div>
-            
-            <p className="mt-6 text-[8px] text-cyan-900 uppercase tracking-widest text-center italic">
-              Adjusting these parameters will update the background autonomous loop on the next dialogue flip.
-              [DEPRECATED: Use Bot-Specific Timers Below]
-            </p>
-          </div>
-        </div>
+        <div className="max-w-5xl mx-auto mb-12" />
       )}
 
       {/* Control Grid */}
@@ -551,14 +455,10 @@ export default function AdminControlPanel() {
                 <textarea 
                   value={botSettings.banned_words.join(', ')}
                   onChange={(e) => {
-                    // Split, trim, deduplicate, and filter empty strings
+                    // Update state with the raw tokens, allowing spaces/commas while typing
                     const raw = e.target.value;
-                    const words = Array.from(new Set(
-                      raw.split(',')
-                        .map(w => w.trim())
-                        .filter(w => w !== "")
-                    )); 
-                    updateBotField(botSettings.bot, 'banned_words', words);
+                    const words = raw.split(',').map(w => w.startsWith(' ') ? w : w); // Keep raw structure
+                    updateBotField(botSettings.bot, 'banned_words', raw.split(','));
                   }}
                   rows={4}
                   className="w-full bg-black border border-[#002200] p-3 text-xs text-[#00cc33] focus:border-[#00ff41] focus:outline-none transition-colors scrollbar-thin scrollbar-thumb-[#00441b] scrollbar-track-black"
