@@ -219,9 +219,13 @@ def generate_response(bot: str, history: list[dict]) -> str:
         # Convert banned words to IDs
         bad_words_ids = []
         for word in bot_settings["banned_words"]:
-            # Match generate.py logic: prefix space variants
-            ids = tokenizers[bot].encode(word, add_prefix_space=False)
-            if ids: bad_words_ids.append(ids)
+            # Encode each word. Note: we omit add_prefix_space as it's not supported by all tokenizers;
+            # the user can include leading spaces in their words if they need differentiation.
+            ids = tokenizers[bot].encode(word)
+            if ids: 
+                # encode() usually returns a list [id1, id2...]. 
+                # generate() expects bad_words_ids to be a list of lists.
+                bad_words_ids.append(ids)
 
         with torch.no_grad():
             output = models[bot].generate(
@@ -249,7 +253,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
 # ── Flask Endpoints ───────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Admin-Secret"])
 
 @app.route("/api/status")
 def get_status():

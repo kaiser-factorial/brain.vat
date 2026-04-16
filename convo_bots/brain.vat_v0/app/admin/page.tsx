@@ -24,14 +24,22 @@ export default function AdminControlPanel() {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
       const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      console.log(`[Admin] Fetching from: ${baseUrl}/api/admin/settings`);
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
         headers: { 'X-Admin-Secret': adminSecret }
       })
-      if (!res.ok) throw new Error('FETCH_FAILED')
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => 'UNKNOWN_SERVER_ERROR');
+        throw new Error(`FETCH_FAILED_BY_SERVER_${res.status}: ${errorText}`);
+      }
       const data = await res.json()
       setSettings(Array.isArray(data) ? data : [])
-    } catch (error) {
+    } catch (error: any) {
       console.error('Settings Fetch Error:', error)
+      // Filter out the scary Supabase lock error
+      if (!error.message?.includes('Lock "lock:sb-')) {
+        setMessage({ text: error.message || 'COMMUNICATION_FAILURE', type: 'error' })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -133,9 +141,18 @@ export default function AdminControlPanel() {
         {settings.length === 0 && (
           <div className="col-span-full border border-dashed border-[#00441b] py-20 text-center">
             <p className="text-[#008f11] text-xs uppercase tracking-widest mb-4">No_Bot_Configuration_Detected</p>
-            <p className="text-[10px] text-[#00441b] max-w-md mx-auto px-4 uppercase leading-relaxed font-mono">
+            <p className="text-[10px] text-[#00441b] max-w-md mx-auto px-4 uppercase leading-relaxed font-mono mb-8">
               Ensure the <span className="text-terminal-green">bot_settings</span> table is created in Supabase. Check the walkthrough for the SQL script.
             </p>
+            <button 
+              onClick={() => {
+                setIsLoading(true);
+                fetchSettings();
+              }}
+              className="text-[10px] text-terminal-green border border-terminal-green px-4 py-2 hover:bg-terminal-green hover:text-black transition-all"
+            >
+              [RETRY_HANDSHAKE]
+            </button>
           </div>
         )}
         {settings.map((botSettings) => (
