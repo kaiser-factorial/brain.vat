@@ -62,16 +62,40 @@ export default function AdminControlPanel() {
       const data = await res.json()
       const sysData = await sysRes.json()
 
+      // Define default settings for any missing bots
+      const defaults = {
+        temperature: 0.9,
+        top_p: 0.95,
+        repetition_penalty: 1.3,
+        max_new_tokens: 55,
+        banned_words: [],
+        model_version: 'v1',
+        base_sleep: 120,
+        base_jitter: 30
+      }
+
       // Ensure settings have defaults for new fields if DB columns are missing
-      const sanitized = (Array.isArray(data) ? data : []).map(s => ({
-        ...s,
-        repetition_penalty: s.repetition_penalty ?? 1.3,
-        max_new_tokens: s.max_new_tokens ?? 55,
-        model_version: s.model_version ?? 'v1',
-        base_sleep: s.base_sleep ?? 120,
-        base_jitter: s.base_jitter ?? 30
-      }))
-      setSettings(sanitized)
+      const dbEntries = (Array.isArray(data) ? data : [])
+      
+      // Ensure BOTH 'a' and 'b' bots exist in the final state
+      const finalSettings = ['a', 'b'].map(botKey => {
+        const existing = dbEntries.find(s => s.bot === botKey)
+        if (existing) {
+          return {
+            ...existing,
+            repetition_penalty: existing.repetition_penalty ?? defaults.repetition_penalty,
+            max_new_tokens: existing.max_new_tokens ?? defaults.max_new_tokens,
+            model_version: existing.model_version ?? defaults.model_version,
+            base_sleep: existing.base_sleep ?? defaults.base_sleep,
+            base_jitter: existing.base_jitter ?? defaults.base_jitter,
+            banned_words: existing.banned_words ?? defaults.banned_words
+          }
+        }
+        // If bot is missing entirely from DB response, reconstruct it from defaults
+        return { bot: botKey, ...defaults }
+      })
+
+      setSettings(finalSettings)
       setSystemSettings(sysData)
       
       // If we got here, the secret we used is valid

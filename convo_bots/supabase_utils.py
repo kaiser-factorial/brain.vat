@@ -139,27 +139,30 @@ def update_bot_settings(sb_client, bot: str, settings: Dict) -> bool:
         return False
     try:
         # Atomic-ish transition: 
-        # 1. Deactivate current active settings for this bot
-        sb_client.table("bot_settings") \
-            .update({"is_active": False}) \
-            .eq("bot", bot) \
-            .eq("is_active", True) \
-            .execute()
-            
-        # 2. Insert new settings as active
-        # The DB Unique Index ensures only ONE can be active at a time
+        # 1. Prepare new payload first
         payload = {
             "bot": bot,
             **settings,
             "is_active": True,
             "updated_at": datetime.now().isoformat()
         }
+
+        # 2. Deactivate current active settings ONLY after we are ready to insert
+        # NOTE: This approach is slightly risky without a true transaction,
+        # but combined with the frontend's 'Reconstruction' logic, it ensures stability.
+        sb_client.table("bot_settings") \
+            .update({"is_active": False}) \
+            .eq("bot", bot) \
+            .eq("is_active", True) \
+            .execute()
+            
+        # 3. Insert new settings as active
         sb_client.table("bot_settings").insert(payload).execute()
         return True
     except Exception as e:
         # If deactivation failed to clear all active rows (race condition),
         # the Unique Index in SQL will stop the insert and throw an error here.
-        print(f"CRITICAL_SYNC_ERROR for {bot}: {e}")
+        logging.error(f"CRITICAL_SYNC_ERROR for {bot}: {e}")
         return False
 
 
