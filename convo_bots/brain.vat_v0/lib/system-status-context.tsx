@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 interface SystemStatus {
   isOnline: boolean
   isLoopActive: boolean
+  loopDetails: { a: boolean, b: boolean, unified: boolean } | null
   loadStatus: { a: string, b: string } | null
   settings: {
     temperature_a: number
@@ -23,6 +24,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SystemStatus>({
     isOnline: false,
     isLoopActive: false,
+    loopDetails: null,
     loadStatus: null,
     settings: null
   })
@@ -35,6 +37,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
       setStatus({
         isOnline: true,
         isLoopActive: data.loop_active ?? false,
+        loopDetails: data.loop_details ?? null,
         loadStatus: data.load_status ?? null,
         settings: data.settings ?? null
       })
@@ -42,6 +45,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
       setStatus({
         isOnline: false,
         isLoopActive: false,
+        loopDetails: null,
         loadStatus: null,
         settings: null
       })

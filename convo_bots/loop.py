@@ -49,12 +49,10 @@ load_dotenv()
 sb_client = get_supabase_client()
 
 # PID file management
-PID_FILE = "loop.pid"
-with open(PID_FILE, "w") as f:
-    f.write(str(os.getpid()))
+PID_FILE = None
 
 def cleanup_pid():
-    if os.path.exists(PID_FILE):
+    if PID_FILE and os.path.exists(PID_FILE):
         os.remove(PID_FILE)
 
 import atexit
@@ -192,6 +190,15 @@ def main():
                         help="Run this many cycles then stop (0 = run forever)")
     args = parser.parse_args()
 
+    # Dynamic PID naming for independent processes
+    global PID_FILE
+    if args.only_a: PID_FILE = "loop_a.pid"
+    elif args.only_b: PID_FILE = "loop_b.pid"
+    else: PID_FILE = "loop_unified.pid"
+    
+    with open(PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
     log.info("=" * 60)
     log.info("brain.vat conversation loop starting")
     log.info(f"  Server:  {SERVER_URL}")
@@ -232,51 +239,49 @@ def main():
         cycle += 1
         
         # ── DYNAMIC SETTINGS POLLING ──────────────────────────────
-        # Fetch latest timing from DB if available, else use args
+        # Determine which bot(s) we are managing in this process
+        active_bots = []
+        if args.only_a: active_bots = ["a"]
+        elif args.only_b: active_bots = ["b"]
+        else: active_bots = ["a", "b"]
+
+        current_bot = active_bots[0] # For single-bot speed polling
+        
         try:
-            r = requests.get(f"{SERVER_URL}/api/admin/system", headers={"X-Admin-Secret": os.getenv("ADMIN_SECRET", "31415926535")}, timeout=10)
+            # Fetch latest settings for the specific bot(s) from the server
+            r = requests.get(f"{SERVER_URL}/api/admin/settings", headers={"X-Admin-Secret": os.getenv("ADMIN_SECRET", "31415926535")}, timeout=10)
             if r.ok:
-                sys_data = r.json()
-                args.sleep = sys_data.get("cycle_sleep", args.sleep)
-                args.jitter = sys_data.get("cycle_jitter", args.jitter)
-                log.info(f"Dynamic timing synced: Sleep {args.sleep}s, Jitter {args.jitter}s")
+                db_settings = r.json()
+                # Find settings for our active bot
+                relevant = [s for s in db_settings if s["bot"] in active_bots]
+                if relevant:
+                    # If we manage one bot, use its specific timing
+                    target = relevant[0]
+                    args.sleep = target.get("base_sleep", args.sleep)
+                    args.jitter = target.get("base_jitter", args.jitter)
+                    log.info(f"Dynamic timing synced for {target['bot']}: Sleep {args.sleep}s, Jitter {args.jitter}s")
         except Exception as e:
-            log.warning(f"Failed to poll system settings: {e}")
-        
-        # Check who spoke last to ensure strictly alternating turns
-        last_speaker = "UNKNOWN"
-        if sb_client:
-            last_speaker = get_last_speaker(sb_client) or "UNKNOWN"
-            log.info(f"Last speaker found in DB: {last_speaker}")
+            log.warning(f"Failed to poll bot settings: {e}")
 
-        # Decide who speaks next
-        # WEIGHED RANDOM: 70% chance to alternate, 30% chance to double-text
-        # But we cap at 2 in a row to satisfy "not a whole bunch"
-        
-        # Check the last TWO messages to count repetitions
-        repeat_count = 0
-        if sb_client:
-            try:
-                history_res = sb_client.table("messages").select("speaker").order("created_at", desc=True).limit(2).execute()
-                if history_res.data:
-                    last_speaker = history_res.data[0].get("speaker")
-                    # If the last two speakers are the same, we MUST alternate
-                    if len(history_res.data) > 1 and history_res.data[0]["speaker"] == history_res.data[1]["speaker"]:
-                        repeat_count = 2
-            except:
-                pass
-
-        if repeat_count >= 2:
-            # Must alternate
-            next_bot = "b" if last_speaker == BOT_A_NAME else "a"
+        # ── DECIDE WHO SPEAKS NEXT ────────────────────────────────
+        # If we are managing only ONE bot, we always speak (after waiting)
+        # unless it's a dry run or model isn't ready.
+        if len(active_bots) == 1:
+            next_bot = active_bots[0]
         else:
-            # Weighted random: 70% chance to flip, 30% to stay
+            # LEGACY / UNIFIED MODE: Decide who speaks next sequentially
+            last_speaker = "UNKNOWN"
+            if sb_client:
+                try:
+                    history_res = sb_client.table("messages").select("speaker").order("created_at", desc=True).limit(2).execute()
+                    if history_res.data:
+                        last_speaker = history_res.data[0].get("speaker")
+                except: pass
+
             choices = ["a", "b"]
             if last_speaker == BOT_A_NAME:
-                # Weights: [Mauk (Stay), Abaci (Flip)]
                 next_bot = random.choices(choices, weights=[0.35, 0.65])[0]
             else:
-                # Weights: [Mauk (Flip), Abaci (Stay)]
                 next_bot = random.choices(choices, weights=[0.65, 0.35])[0]
         
         next_bot_name = BOT_A_NAME if next_bot == "a" else BOT_B_NAME
@@ -289,10 +294,10 @@ def main():
             trigger_generate(next_bot, dry_run=args.dry_run)
             
         # ── ORGANIC THINKING DELAY ─────────────────────────────
-        # Use the configured sleep and jitter to determine wait time
+        # Use the bot-specific sleep and jitter to determine wait time
         wait_time = max(10, args.sleep + random.randint(-args.jitter, args.jitter))
         wake_at = datetime.fromtimestamp(time.time() + wait_time).strftime("%H:%M:%S")
-        log.info(f"Next turn in {wait_time}s (at {wake_at})...")
+        log.info(f"Next {next_bot} turn in {wait_time}s (at {wake_at})...")
 
         if not args.dry_run:
             time.sleep(wait_time)

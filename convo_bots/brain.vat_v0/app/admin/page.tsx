@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
+import { useSystemStatus } from '@/lib/system-status-context'
 
 interface BotSettings {
   bot: string
@@ -12,6 +13,8 @@ interface BotSettings {
   max_new_tokens: number
   banned_words: string[]
   model_version: string
+  base_sleep: number
+  base_jitter: number
   updated_at?: string
 }
 
@@ -23,6 +26,7 @@ interface SystemSettings {
 
 export default function AdminControlPanel() {
   const { user, isLoading: authLoading } = useAuth()
+  const { loopDetails } = useSystemStatus()
   const router = useRouter()
   const [settings, setSettings] = useState<BotSettings[]>([])
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({ cycle_sleep: 120, cycle_jitter: 30 })
@@ -31,6 +35,8 @@ export default function AdminControlPanel() {
   const [isSavingSystem, setIsSavingSystem] = useState(false)
   const [manualSecret, setManualSecret] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
+  const [criticalError, setCriticalError] = useState<string | null>(null)
+  const [showSuccess, setShowSuccess] = useState<string | null>(null)
 
   const fetchSettings = useCallback(async (forcedSecret?: string) => {
     try {
@@ -61,7 +67,9 @@ export default function AdminControlPanel() {
         ...s,
         repetition_penalty: s.repetition_penalty ?? 1.3,
         max_new_tokens: s.max_new_tokens ?? 55,
-        model_version: s.model_version ?? 'v1'
+        model_version: s.model_version ?? 'v1',
+        base_sleep: s.base_sleep ?? 120,
+        base_jitter: s.base_jitter ?? 30
       }))
       setSettings(sanitized)
       setSystemSettings(sysData)
@@ -129,11 +137,11 @@ export default function AdminControlPanel() {
 
       if (!res.ok) throw new Error('SAVE_FAILED')
       
-      setMessage({ text: `BOT_${botKey.toUpperCase()}_HYPERPARAMETERS_SYNCED`, type: 'success' })
+      setShowSuccess(`BOT_${botKey.toUpperCase()}_PARAMETERS_PUSHED`)
+      setTimeout(() => setShowSuccess(null), 2500)
       fetchSettings()
-      setTimeout(() => setMessage(null), 3000)
-    } catch (error) {
-      setMessage({ text: 'SYNC_FAILURE_DETECTION', type: 'error' })
+    } catch (error: any) {
+      setCriticalError(error.message || 'SYNC_PROTOCOL_FAILURE')
     } finally {
       setIsSaving(null)
     }
@@ -242,9 +250,46 @@ export default function AdminControlPanel() {
         </div>
       )}
 
-      {message && !message.text.includes('SECURE_ACCESS_REQUIRED') && (
-        <div className={`max-w-5xl mx-auto mb-8 p-3 text-[10px] uppercase tracking-[0.2em] text-center border ${message.type === 'success' ? 'border-terminal-green bg-terminal-green/5 text-terminal-green' : 'border-red-500 bg-red-500/5 text-red-500'} animate-in fade-in slide-in-from-top-4 duration-500`}>
-          {message.text}
+      {/* Critical Danger Zone (Sync Failure) */}
+      {criticalError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-red-950/90 backdrop-blur-xl animate-in fade-in zoom-in duration-300">
+          <div className="max-w-2xl w-full mx-4 border-[4px] border-red-500 bg-black p-12 shadow-[0_0_100px_rgba(239,68,68,0.5)] transform -rotate-1">
+            <div className="flex items-center gap-6 mb-8 text-red-500">
+              <div className="w-16 h-16 border-4 border-red-500 flex items-center justify-center text-4xl font-bold animate-pulse">!</div>
+              <div>
+                <h2 className="text-3xl font-black uppercase tracking-[0.2em] leading-none mb-2">Sync_Protocol_Failure</h2>
+                <div className="text-xs font-mono opacity-80 uppercase tracking-widest">Core_Link_Severed // Database_Rejection</div>
+              </div>
+            </div>
+            
+            <div className="bg-red-500/10 border border-red-500/30 p-6 mb-10 font-mono text-sm text-red-400">
+              <div className="mb-2 opacity-60 text-[10px] uppercase">Traceback_Log:</div>
+              <p className="font-bold tracking-tight">{criticalError}</p>
+            </div>
+
+            <button 
+              onClick={() => setCriticalError(null)}
+              className="w-full bg-red-600 text-black font-black py-5 text-lg uppercase tracking-[0.3em] hover:bg-white transition-all active:scale-95 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
+            >
+              [ Acknowledge_Protocol_Failure ]
+            </button>
+            <p className="mt-6 text-[9px] text-red-500/40 uppercase text-center tracking-widest font-bold">
+              Attempts to persist parameters will be suspended until session re-evaluation.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Dyna-Cyan Success Heartbeat */}
+      {showSuccess && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[90] pointer-events-none">
+          <div className="bg-[#00f5ff] text-black px-12 py-6 shadow-[0_0_60px_#00f5ffaa] animate-out fade-out slide-out-to-top-8 zoom-out fill-mode-forwards duration-1000 delay-1500">
+            <div className="flex items-center gap-4">
+              <div className="w-3 h-3 bg-black rounded-full animate-ping" />
+              <div className="text-xl font-black uppercase tracking-[0.5em]">{showSuccess}</div>
+            </div>
+            <div className="text-[10px] uppercase font-bold tracking-widest mt-1 opacity-70">Parameters_Committed_To_Core</div>
+          </div>
         </div>
       )}
 
@@ -306,6 +351,7 @@ export default function AdminControlPanel() {
             
             <p className="mt-6 text-[8px] text-cyan-900 uppercase tracking-widest text-center italic">
               Adjusting these parameters will update the background autonomous loop on the next dialogue flip.
+              [DEPRECATED: Use Bot-Specific Timers Below]
             </p>
           </div>
         </div>
@@ -342,31 +388,65 @@ export default function AdminControlPanel() {
                 </span>
               </div>
               <div className="text-right">
-                <div className="text-[9px] text-[#008f11] font-bold uppercase tracking-widest font-mono">
-                  Node_{botSettings.bot.toUpperCase()}
-                </div>
-                {botSettings.updated_at && (
-                  <div className="text-[7px] text-[#00441b] uppercase tracking-widest mt-0.5">
-                    Last_Sync: {new Date(botSettings.updated_at).toLocaleString([], { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                <div className="flex flex-col items-end">
+                  {/* Loop Status Pill */}
+                  <div className={`text-[8px] font-black px-2 py-0.5 mb-1 tracking-tighter rounded-full ${loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'bg-[#00ff41] text-black shadow-[0_0_10px_#00ff41]' : 'border border-[#00441b] text-[#00441b]'}`}>
+                    {loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'LOOP_ACTIVE' : 'LOOP_OFFLINE'}
                   </div>
-                )}
+                  <div className="text-[9px] text-[#008f11] font-bold uppercase tracking-widest font-mono">
+                    Node_{botSettings.bot.toUpperCase()}
+                  </div>
+                  {botSettings.updated_at && (
+                    <div className="text-[7px] text-[#00441b] uppercase tracking-widest mt-0.5">
+                      Last_Sync: {new Date(botSettings.updated_at).toLocaleString([], { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             <div className="p-8 space-y-8">
-              {/* Model Version */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Model Version</label>
-                  <span className="text-[10px] text-terminal-green/60 font-mono select-none">Iteration_ID</span>
+              {/* Model Version & Timing Group */}
+              <div className="grid grid-cols-1 gap-6 pb-6 border-b border-[#002200]">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Model Version</label>
+                  </div>
+                  <input 
+                    type="text"
+                    value={botSettings.model_version || 'v1'}
+                    onChange={(e) => updateBotField(botSettings.bot, 'model_version', e.target.value)}
+                    placeholder="e.g. v1, v2-experimental"
+                    className="w-full bg-black border border-[#002200] px-4 py-2 text-xs text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors font-mono"
+                  />
                 </div>
-                <input 
-                  type="text"
-                  value={botSettings.model_version || 'v1'}
-                  onChange={(e) => updateBotField(botSettings.bot, 'model_version', e.target.value)}
-                  placeholder="e.g. v1, v2-experimental"
-                  className="w-full bg-black border border-[#002200] px-4 py-2 text-xs text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors font-mono"
-                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Frequency (s)</label>
+                      <span className="text-xs text-cyan-400 tabular-nums">{botSettings.base_sleep}s</span>
+                    </div>
+                    <input 
+                      type="range" min="10" max="600" step="10"
+                      value={botSettings.base_sleep || 120}
+                      onChange={(e) => updateBotField(botSettings.bot, 'base_sleep', parseInt(e.target.value))}
+                      className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Jitter (s)</label>
+                      <span className="text-xs text-cyan-400 tabular-nums">±{botSettings.base_jitter}s</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="120" step="5"
+                      value={botSettings.base_jitter || 30}
+                      onChange={(e) => updateBotField(botSettings.bot, 'base_jitter', parseInt(e.target.value))}
+                      className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Temperature */}
@@ -445,11 +525,15 @@ export default function AdminControlPanel() {
               <div className="space-y-4">
                 <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest block">Banned Words (Comma-Separated)</label>
                 <textarea 
-                  value={botSettings.banned_words.join(',')}
+                  value={botSettings.banned_words.join(', ')}
                   onChange={(e) => {
-                    const words = e.target.value.split(',')
-                      .map(w => w.trim())
-                      .filter(w => w !== ""); 
+                    // Split, trim, deduplicate, and filter empty strings
+                    const raw = e.target.value;
+                    const words = Array.from(new Set(
+                      raw.split(',')
+                        .map(w => w.trim())
+                        .filter(w => w !== "")
+                    )); 
                     updateBotField(botSettings.bot, 'banned_words', words);
                   }}
                   rows={4}

@@ -126,17 +126,33 @@ model_lock = threading.Lock()
 logging_lock = threading.Lock()
 cache_lock = threading.Lock()
 
+def get_loop_status():
+    """Verify which loop processes are active via their specific PID files."""
+    results = {"a": False, "b": False, "unified": False}
+    pid_files = {
+        "a": BASE_DIR / "loop_a.pid",
+        "b": BASE_DIR / "loop_b.pid",
+        "unified": BASE_DIR / "loop_unified.pid"
+    }
+    
+    for key, path in pid_files.items():
+        if path.exists():
+            try:
+                with open(path, "r") as f:
+                    pid = int(f.read().strip())
+                os.kill(pid, 0)
+                results[key] = True
+            except (ValueError, ProcessLookupError, PermissionError):
+                # PID file is stale or unreadable
+                pass
+            except Exception:
+                pass
+    return results
+
 def is_loop_running():
-    """Verify if the loop.py process is active via its PID file."""
-    try:
-        pid_file = BASE_DIR / "loop.pid"
-        if not pid_file.exists(): return False
-        with open(pid_file, "r") as f:
-            pid = int(f.read().strip())
-        os.kill(pid, 0) # Check if process exists
-        return True
-    except:
-        return False
+    """Fallback for any active loop."""
+    status = get_loop_status()
+    return any(status.values())
 
 def ensure_model(bot: str):
     """Load model lazily."""
@@ -240,7 +256,9 @@ def generate_response(bot: str, history: list[dict]) -> str:
             "repetition_penalty": SETTINGS["repetition_penalty"],
             "max_new_tokens": SETTINGS["max_new_tokens"],
             "banned_words": [],
-            "model_version": "v1"
+            "model_version": "v1",
+            "base_sleep": 120,
+            "base_jitter": 30
         }
         
         if SUPABASE_UTILS_AVAILABLE and sb_client:
@@ -267,6 +285,8 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 
                 bot_settings["banned_words"] = current.get("banned_words", [])
                 bot_settings["model_version"] = current.get("model_version", "v1")
+                bot_settings["base_sleep"] = current.get("base_sleep", 120)
+                bot_settings["base_jitter"] = current.get("base_jitter", 30)
                 logging.info(f"Using DB settings for {bot_name}: {bot_settings}")
             else:
                 # Fallback to .env defaults if not in DB
@@ -341,9 +361,11 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type"
 @app.route("/api/status")
 def get_status():
     # Start with static defaults
+    loop_status = get_loop_status()
     payload = {
         "status": "online", 
-        "loop_active": is_loop_running(),
+        "loop_active": any(loop_status.values()),
+        "loop_details": loop_status,
         "load_status": load_status,
         "settings": SETTINGS.copy(),
         "names": {
@@ -434,20 +456,31 @@ def admin_settings():
         bot = data.get("bot")
         if bot not in ("a", "b"): abort(400)
         
+        # Validate and clean banned_words
+        banned_raw = data.get("banned_words", [])
+        if not isinstance(banned_raw, list):
+            logging.error(f"Invalid banned_words format received: {type(banned_raw)}")
+            return jsonify({"status": "error", "message": "BANNED_WORDS_MUST_BE_ARRAY"}), 400
+        
+        # Ensure all items are strings and non-empty
+        banned_clean = [str(w).strip() for w in banned_raw if str(w).strip()]
+        
         # Strip internal keys from settings
         settings = {
             "temperature": data.get("temperature"),
             "top_p": data.get("top_p"),
             "repetition_penalty": data.get("repetition_penalty"),
             "max_new_tokens": data.get("max_new_tokens"),
-            "banned_words": data.get("banned_words", []),
-            "model_version": data.get("model_version", "v1")
+            "banned_words": banned_clean,
+            "model_version": data.get("model_version", "v1"),
+            "base_sleep": data.get("base_sleep", 120),
+            "base_jitter": data.get("base_jitter", 30)
         }
         
         success = update_bot_settings(sb_client, bot, settings)
         if success:
             return jsonify({"status": "success"})
-        return jsonify({"status": "error"}), 500
+        return jsonify({"status": "error", "message": "DATABASE_HANDSHAKE_FAILED"}), 500
 
     # GET
     settings = fetch_bot_settings(sb_client)
