@@ -212,7 +212,8 @@ logging_lock = threading.Lock()
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def strip_dialogue_prefix(text: str, name: str) -> str:
-    pattern = rf"^\s*\[{re.escape(name)}\]:\s*"
+    # Handle recursive tags: [MAUK]: [MAUK]: hello -> hello
+    pattern = rf"^\s*(\[{re.escape(name)}\]:\s*)+"
     text = re.sub(pattern, "", text, flags=re.IGNORECASE).strip()
     for other in [BOT_A_NAME, BOT_B_NAME, USER_NAME]:
         next_turn = text.find(f"[{other}]:")
@@ -226,7 +227,7 @@ def log_prompt(bot: str, prompt: str, response: str, settings: dict = None):
             "timestamp": datetime.now().isoformat(),
             "bot": bot,
             "bot_name": BOT_A_NAME if bot == "a" else BOT_B_NAME,
-            "settings": settings,
+            "settings": settings.copy() if settings else {},
             "prompt": prompt,
             "response": response
         }
@@ -307,7 +308,10 @@ def generate_response(bot: str, history: list[dict]) -> str:
 
         # --- BANNED WORDS CACHING ---
         # Cache tokenized banned words to avoid redundant encoding on every turn
-        cache_key = f"{bot}:{','.join(bot_settings['banned_words'])}"
+        # sorting ensures that order changes in the list don't invalidate the cache
+        clean_words = sorted([w.strip() for w in bot_settings["banned_words"] if w.strip()])
+        cache_key = f"{bot}:{','.join(clean_words)}"
+        
         with cache_lock:
             if not hasattr(generate_response, "_banned_cache"):
                 generate_response._banned_cache = {}
@@ -318,18 +322,23 @@ def generate_response(bot: str, history: list[dict]) -> str:
             else:
                 bad_words_ids = []
                 eos_id = tokenizers[bot].eos_token_id
-                for word in bot_settings["banned_words"]:
-                    if not word: continue
-                    # Smart-Ban: Handle both the raw word and its space-prefixed variant
-                    # This covers 'iced' at the start of a sentence AND ' iced' in the middle.
-                    for variant in [word, f" {word}"]:
-                        ids = tokenizers[bot].encode(variant, add_special_tokens=False)
-                        if ids:
-                            # SAFETY: Never allow banning the EOS token
-                            if len(ids) == 1 and ids[0] == eos_id:
-                                continue
-                            if ids not in bad_words_ids:
-                                bad_words_ids.append(ids)
+                
+                for raw_word in clean_words:
+                    # Case-Agnostic Suppression: Expand each word into its variations
+                    # (word, Word, WORD) with and without leading spaces.
+                    word_variations = {
+                        raw_word.lower(), raw_word.title(), raw_word.upper()
+                    }
+                    
+                    for word in word_variations:
+                        for variant in [word, f" {word}"]:
+                            ids = tokenizers[bot].encode(variant, add_special_tokens=False)
+                            if ids:
+                                # SAFETY: Never allow banning the EOS token
+                                if len(ids) == 1 and ids[0] == eos_id:
+                                    continue
+                                if ids not in bad_words_ids:
+                                    bad_words_ids.append(ids)
                 
                 final_bad_words = bad_words_ids if bad_words_ids else None
                 
@@ -339,15 +348,22 @@ def generate_response(bot: str, history: list[dict]) -> str:
                     
                 generate_response._banned_cache[cache_key] = final_bad_words
 
+        # DEEP AUDIT: Log the exact params going into the engine
+        inference_params = {
+            "max_new_tokens": bot_settings.get("max_new_tokens", SETTINGS["max_new_tokens"]),
+            "do_sample": True,
+            "temperature": bot_settings["temperature"],
+            "top_p": bot_settings["top_p"],
+            "top_k": bot_settings.get("top_k", 0),
+            "repetition_penalty": bot_settings.get("repetition_penalty", SETTINGS["repetition_penalty"]),
+            "bad_words_count": len(final_bad_words) if final_bad_words else 0
+        }
+        logging.info(f"Generating for {bot_name} with: {inference_params}")
+
         with torch.no_grad():
             output = models[bot].generate(
                 **inputs,
-                max_new_tokens=bot_settings.get("max_new_tokens", SETTINGS["max_new_tokens"]),
-                do_sample=True,
-                temperature=bot_settings["temperature"],
-                top_p=bot_settings["top_p"],
-                top_k=bot_settings.get("top_k", 0),
-                repetition_penalty=bot_settings.get("repetition_penalty", SETTINGS["repetition_penalty"]),
+                **{k: v for k, v in inference_params.items() if k != "bad_words_count"},
                 bad_words_ids=final_bad_words,
                 eos_token_id=tokenizers[bot].eos_token_id,
             )
