@@ -29,7 +29,8 @@ export default function ArchivePage() {
   useEffect(() => {
     const fetchArchive = async () => {
       try {
-        const res = await fetch('http://localhost:5001/api/memory/archive')
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+        const res = await fetch(`${baseUrl}/api/memory/archive`)
         if (!res.ok) throw new Error('Offline')
         const data = await res.json()
         setRecords(data)
@@ -58,7 +59,8 @@ export default function ArchivePage() {
     }
     setSourceText('recalling...')
     try {
-      const res = await fetch(`http://localhost:5001/api/memory/source/${bot}/${concept}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const res = await fetch(`${baseUrl}/api/memory/source/${bot}/${concept}`)
       if (!res.ok) throw new Error('Offline')
       const data = await res.json()
       setSourceText(data.source_text)

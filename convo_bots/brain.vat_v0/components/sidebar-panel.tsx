@@ -79,7 +79,8 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
     setHoveredConcept(concept)
     setSourceText('recalling...')
     try {
-      const res = await fetch(`http://127.0.0.1:5001/api/memory/source/${bot}/${concept}`)
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const res = await fetch(`${baseUrl}/api/memory/source/${bot}/${concept}`)
       const data = await res.json()
       setSourceText(data.source_text)
     } catch (err) {
