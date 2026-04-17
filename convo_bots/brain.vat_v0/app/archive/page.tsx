@@ -30,7 +30,7 @@ export default function ArchivePage() {
     const fetchArchive = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-        const res = await fetch(`${baseUrl}/api/memory/archive`)
+        const res = await fetch(`${baseUrl}/api/memory/archive`, { cache: 'no-store' })
         if (!res.ok) throw new Error('Offline')
         const data = await res.json()
         setRecords(data)
@@ -60,7 +60,7 @@ export default function ArchivePage() {
     setSourceText('recalling...')
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const res = await fetch(`${baseUrl}/api/memory/source/${bot}/${concept}`)
+      const res = await fetch(`${baseUrl}/api/memory/source/${bot}/${concept}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Offline')
       const data = await res.json()
       setSourceText(data.source_text)

@@ -6,6 +6,7 @@ interface SystemStatus {
   isOnline: boolean
   isLoopActive: boolean
   loopDetails: { a: boolean, b: boolean, unified: boolean } | null
+  loopPauses: { a: boolean, b: boolean } | null
   loadStatus: { a: string, b: string } | null
   settings: {
     temperature_a: number
@@ -25,6 +26,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
     isOnline: false,
     isLoopActive: false,
     loopDetails: null,
+    loopPauses: null,
     loadStatus: null,
     settings: null
   })
@@ -38,6 +40,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
         isOnline: true,
         isLoopActive: data.loop_active ?? false,
         loopDetails: data.loop_details ?? null,
+        loopPauses: data.loop_pauses ?? null,
         loadStatus: data.load_status ?? null,
         settings: data.settings ?? null
       })
@@ -46,6 +49,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
         isOnline: false,
         isLoopActive: false,
         loopDetails: null,
+        loopPauses: null,
         loadStatus: null,
         settings: null
       })

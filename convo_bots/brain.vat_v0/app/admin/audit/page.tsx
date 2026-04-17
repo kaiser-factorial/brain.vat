@@ -26,7 +26,8 @@ export default function AuditDashboard() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
       const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       const res = await fetch(`${baseUrl}/api/admin/audit`, {
-        headers: { 'X-Admin-Secret': adminSecret }
+        headers: { 'X-Admin-Secret': adminSecret, 'Cache-Control': 'no-store' },
+        cache: 'no-store'
       })
       
       if (!res.ok) {

@@ -353,12 +353,19 @@ class MemoryGraph:
             return
         try:
             for phrase in phrases:
-                # Upsert to track the last time this concept was thought of.
-                # Aligning with user's table: occurrence_count, last_thought_at, source_text
+                # 1. Fetch current occurrence count if it exists
+                existing = sb.table("memory_archive").select("occurrence_count").eq("bot", self.bot_key).eq("concept", phrase).execute()
+                current_count = 1
+                if existing.data and "occurrence_count" in existing.data[0]:
+                    val = existing.data[0].get("occurrence_count")
+                    current_count = (val if val is not None else 0) + 1
+
+                # 2. Upsert to track the last time this concept was thought of, and increment the count
                 sb.table("memory_archive").upsert({
                     "bot": self.bot_key,
                     "concept": phrase,
                     "source_text": source_text,
+                    "occurrence_count": current_count,
                     "last_thought_at": datetime.utcnow().isoformat()
                 }, on_conflict="bot,concept").execute()
             log.info(f"[{self.bot_name}] Archived {len(phrases)} concepts with provenance")

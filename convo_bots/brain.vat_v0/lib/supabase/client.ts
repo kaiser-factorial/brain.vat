@@ -16,6 +16,12 @@ export function createClient() {
     return createBrowserClient('', '')
   }
   
-  client = createBrowserClient(url, key)
+  client = createBrowserClient(url, key, {
+    global: {
+      fetch: (input, init) => {
+        return fetch(input, { ...init, cache: 'no-store' })
+      }
+    }
+  })
   return client
 }

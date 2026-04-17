@@ -37,7 +37,8 @@ export default function AdminControlPanel() {
       const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       // Fetch Bot Settings
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
-        headers: { 'X-Admin-Secret': adminSecret }
+        headers: { 'X-Admin-Secret': adminSecret, 'Cache-Control': 'no-store' },
+        cache: 'no-store'
       })
       
       if (!res.ok) {
@@ -176,6 +177,26 @@ export default function AdminControlPanel() {
     ))
   }
 
+  const togglePause = async (botKey: string, currentState: boolean) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const adminSecret = manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+      const res = await fetch(`${baseUrl}/api/admin/pause/${botKey}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Admin-Secret': adminSecret
+        },
+        body: JSON.stringify({ paused: !currentState })
+      })
+      if (!res.ok) throw new Error('PAUSE_TOGGLE_FAILED')
+      refreshStatus()
+    } catch (err) {
+      console.error(err)
+      setCriticalError('Failed to toggle loop state.')
+    }
+  }
+
   if (authLoading || (isLoading && !message)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black font-mono text-terminal-green text-xs tracking-widest uppercase text-center p-8">
@@ -289,8 +310,9 @@ export default function AdminControlPanel() {
       )}
 
       {/* Control Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-        {settings.length === 0 && (
+      {!message && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {settings.length === 0 && (
           <div className="col-span-full border border-dashed border-[#00441b] py-20 text-center">
             <p className="text-[#008f11] text-xs uppercase tracking-widest mb-4">No_Bot_Configuration_Detected</p>
             <p className="text-[10px] text-[#00441b] max-w-md mx-auto px-4 uppercase leading-relaxed font-mono mb-8">
@@ -318,7 +340,17 @@ export default function AdminControlPanel() {
                   {botSettings.bot === 'a' ? 'MAUK' : 'ABACI'}
                 </span>
               </div>
-              <div className="text-right">
+              <div className="flex items-center gap-4 text-right">
+                <button
+                  onClick={() => togglePause(botSettings.bot, loopPauses?.[botSettings.bot as 'a' | 'b'] || false)}
+                  className={`text-[8px] uppercase tracking-widest px-3 py-1 border transition-colors ${
+                    loopPauses?.[botSettings.bot as 'a' | 'b'] 
+                      ? 'border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-black shadow-[0_0_10px_#eab308]' 
+                      : 'border-[#00441b] text-[#008f11] hover:border-[#00ff41] hover:text-[#00ff41]'
+                  }`}
+                >
+                  {loopPauses?.[botSettings.bot as 'a' | 'b'] ? '[ SYSTEM_PAUSED ]' : '[ PAUSE_LOOP ]'}
+                </button>
                 <div className="flex flex-col items-end">
                   {/* Loop Status Pill */}
                   <div className={`text-[8px] font-black px-2 py-0.5 mb-1 tracking-tighter rounded-full ${loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'bg-[#00ff41] text-black shadow-[0_0_10px_#00ff41]' : 'border border-[#00441b] text-[#00441b]'}`}>
@@ -504,7 +536,8 @@ export default function AdminControlPanel() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       <div className="mt-16 text-center text-[9px] text-[#00441b] uppercase tracking-[0.5em] pb-8">
         brain.vat // hyperparameter_management_shell // v1.2.5

@@ -127,6 +127,9 @@ model_lock = threading.Lock()
 logging_lock = threading.Lock()
 cache_lock = threading.Lock()
 
+# Pause state (in-memory for safe-default behavior on crash)
+LOOP_PAUSES = {"a": False, "b": False}
+
 def get_loop_status():
     """Verify which loop processes are active via their specific PID files."""
     results = {"a": False, "b": False, "unified": False}
@@ -392,6 +395,7 @@ def get_status():
         "status": "online", 
         "loop_active": any(loop_status.values()),
         "loop_details": loop_status,
+        "loop_pauses": LOOP_PAUSES.copy(),
         "load_status": load_status,
         "settings": SETTINGS.copy(),
         "names": {
@@ -512,6 +516,25 @@ def admin_settings():
     # GET
     settings = fetch_bot_settings(sb_client)
     return jsonify(settings)
+
+@app.route("/api/admin/pause/<bot>", methods=["POST"])
+def admin_toggle_pause(bot):
+    """Toggle isolated pause state for an individual bot loop."""
+    if bot not in ("a", "b"): abort(400)
+    
+    # Security Check
+    expected = os.getenv("ADMIN_SECRET")
+    secret = request.headers.get("X-Admin-Secret")
+    if not expected or secret != expected:
+        abort(401)
+        
+    data = request.get_json(silent=True) or {}
+    is_paused = data.get("paused", False)
+    
+    LOOP_PAUSES[bot] = bool(is_paused)
+    logging.info(f"Admin manually toggled pause state for {bot} to: {LOOP_PAUSES[bot]}")
+    
+    return jsonify({"success": True, "bot": bot, "paused": LOOP_PAUSES[bot]})
 
 @app.route("/api/admin/audit")
 def get_audit_logs():

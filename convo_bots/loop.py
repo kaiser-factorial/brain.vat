@@ -290,6 +290,22 @@ def main():
         log.info(f"Organic Turn {cycle} — {next_bot_name} is thinking...")
         log.info(f"{'─' * 50}")
 
+        # ── ACTIVE PAUSE CHECK ────────────────────────────────────
+        is_paused = False
+        try:
+            status_req = requests.get(f"{SERVER_URL}/api/status", timeout=5)
+            if status_req.ok:
+                pauses = status_req.json().get("loop_pauses", {})
+                if pauses.get(next_bot, False):
+                    is_paused = True
+                    log.info(f"[{next_bot_name}] Suspended by Admin Control Panel. Sleeping for 5s...")
+        except Exception as e:
+            log.warning(f"Failed to check pause status: {e}")
+
+        if is_paused:
+            time.sleep(5)
+            continue
+
         if not args.dry_run:
             trigger_generate(next_bot, dry_run=args.dry_run)
             
