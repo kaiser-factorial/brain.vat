@@ -20,30 +20,30 @@ export function ServerStatusOverlay() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md animate-in fade-in duration-500">
-      <div className="w-full max-w-md p-6 bg-black border-2 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.2)] font-mono relative overflow-hidden">
+      <div className="w-full max-w-md p-6 bg-black border-2 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.2)] font-mono relative overflow-hidden">
         {/* Terminal Header */}
-        <div className="absolute top-0 left-0 right-0 h-4 bg-yellow-500/20 flex items-center px-2 gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/40" />
-          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/40" />
-          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/40" />
+        <div className="absolute top-0 left-0 right-0 h-4 bg-red-500/20 flex items-center px-2 gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500/40" />
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500/40" />
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500/40" />
         </div>
 
         <div className="mt-4 space-y-4">
           <div className="flex items-center gap-3">
-            <span className="text-yellow-500 animate-pulse">&gt;&gt;&gt;</span>
-            <h2 className="text-xl font-bold text-yellow-500 uppercase tracking-tighter">
+            <span className="text-red-500 animate-pulse">&gt;&gt;&gt;</span>
+            <h2 className="text-xl font-bold text-red-500 uppercase tracking-tighter">
               {reason === 'server' ? 'Inference Server Offline' : 'Dialogue Loop Inactive'}
             </h2>
           </div>
 
-          <div className="p-3 bg-yellow-500/5 border border-yellow-500/20 text-[11px] leading-relaxed text-yellow-500/80">
+          <div className="p-3 bg-red-500/5 border border-red-500/20 text-[11px] leading-relaxed text-red-500/80">
             <p>CRITICAL_ERROR: Connection to the symbolic processing unit has been lost. Autonomous dialogue generation is suspended.</p>
           </div>
 
           <div className="flex items-center gap-6 pt-2">
             <button
               onClick={() => setDismissed(true)}
-              className="text-xs text-terminal-green hover:underline uppercase tracking-widest font-bold"
+              className="text-xs text-red-500 hover:underline uppercase tracking-widest font-bold"
             >
               [dismiss & view history]
             </button>

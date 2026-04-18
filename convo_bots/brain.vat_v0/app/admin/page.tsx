@@ -21,7 +21,7 @@ interface BotSettings {
 
 export default function AdminControlPanel() {
   const { user, isLoading: authLoading } = useAuth()
-  const { loopDetails } = useSystemStatus()
+  const { loopDetails, loopPauses, refreshStatus } = useSystemStatus()
   const router = useRouter()
   const [settings, setSettings] = useState<BotSettings[]>([])
   const [isLoading, setIsLoading] = useState(true)

@@ -249,7 +249,7 @@ def main():
         
         try:
             # Fetch latest settings for the specific bot(s) from the server
-            r = requests.get(f"{SERVER_URL}/api/admin/settings", headers={"X-Admin-Secret": os.getenv("ADMIN_SECRET", "31415926535")}, timeout=10)
+            r = requests.get(f"{SERVER_URL}/api/admin/settings", headers={"X-Admin-Secret": os.getenv("ADMIN_SECRET", "")}, timeout=10)
             if r.ok:
                 db_settings = r.json()
                 # Find settings for our active bot

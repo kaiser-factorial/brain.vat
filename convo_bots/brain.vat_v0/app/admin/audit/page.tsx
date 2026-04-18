@@ -16,6 +16,7 @@ export default function AuditDashboard() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [logs, setLogs] = useState<AuditLog[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [manualSecret, setManualSecret] = useState<string | null>(null)
   const [errorStatus, setErrorStatus] = useState<string | null>(null)
   const [glitchText, setGlitchText] = useState('')

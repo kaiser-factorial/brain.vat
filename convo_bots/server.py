@@ -215,7 +215,7 @@ logging_lock = threading.Lock()
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def check_admin_auth():
     """Verify the X-Admin-Secret header against environment or fallback."""
-    expected = os.getenv("ADMIN_SECRET", "31415926535")
+    expected = os.getenv("ADMIN_SECRET", "")
     secret = request.headers.get("X-Admin-Secret", "").strip()
     if not expected or secret != expected:
         abort(401)
