@@ -213,6 +213,12 @@ model_lock = threading.Lock()
 logging_lock = threading.Lock()
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+def check_admin_auth():
+    """Verify the X-Admin-Secret header against environment or fallback."""
+    expected = os.getenv("ADMIN_SECRET", "31415926535")
+    secret = request.headers.get("X-Admin-Secret", "").strip()
+    if not expected or secret != expected:
+        abort(401)
 
 def strip_dialogue_prefix(text: str, name: str) -> str:
     # Handle recursive tags: [MAUK]: [MAUK]: hello -> hello
@@ -469,11 +475,7 @@ def generate(bot):
 @app.route("/api/admin/settings", methods=["GET", "POST"])
 def admin_settings():
     # Security: Strict ADMIN_SECRET check
-    expected = os.getenv("ADMIN_SECRET")
-    secret = request.headers.get("X-Admin-Secret")
-    
-    if not expected or secret != expected:
-        abort(401)
+    check_admin_auth()
         
     if not SUPABASE_UTILS_AVAILABLE or not sb_client:
         return jsonify({"error": "Supabase unavailable"}), 503
@@ -523,10 +525,7 @@ def admin_toggle_pause(bot):
     if bot not in ("a", "b"): abort(400)
     
     # Security Check
-    expected = os.getenv("ADMIN_SECRET")
-    secret = request.headers.get("X-Admin-Secret")
-    if not expected or secret != expected:
-        abort(401)
+    check_admin_auth()
         
     data = request.get_json(silent=True) or {}
     is_paused = data.get("paused", False)
@@ -540,11 +539,7 @@ def admin_toggle_pause(bot):
 def get_audit_logs():
     """Retrieve prompt audit logs for the secret dashboard efficiently."""
     # Security: Strict ADMIN_SECRET check
-    expected = os.getenv("ADMIN_SECRET")
-    secret = request.headers.get("X-Admin-Secret")
-    
-    if not expected or secret != expected:
-        abort(401)
+    check_admin_auth()
         
     try:
         if not PROMPT_AUDIT_LOG.exists():
@@ -612,9 +607,7 @@ def admin_system_settings():
         return jsonify({"error": "Supabase unavailable"}), 503
     
     # Check admin secret
-    provided_secret = request.headers.get("X-Admin-Secret")
-    if not provided_secret or provided_secret != os.getenv("ADMIN_SECRET", "31415926535"):
-        abort(401)
+    check_admin_auth()
 
     if request.method == "POST":
         # Legacy: Still accept POST to avoid 404s, but don't do anything

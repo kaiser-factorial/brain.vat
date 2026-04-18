@@ -99,6 +99,10 @@ export default function AdminControlPanel() {
     } catch (error: any) {
       console.error('Settings Fetch Error:', error)
       if (error.message === 'SECURE_ACCESS_REQUIRED') {
+        // Flush invalid or missing secret from session storage to prevent stuck loops
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('brain_vat_admin_secret')
+        }
         setMessage({ text: 'SECURE_ACCESS_REQUIRED // INVALID_OR_MISSING_PASSPHRASE', type: 'error' })
       } else if (!error.message?.includes('Lock "lock:sb-')) {
         setMessage({ text: error.message || 'COMMUNICATION_FAILURE', type: 'error' })
