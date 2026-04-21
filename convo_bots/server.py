@@ -391,7 +391,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
 # ── Flask Endpoints ───────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Admin-Secret"])
+CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Admin-Secret", "Cache-Control"])
 
 @app.route("/api/status")
 def get_status():

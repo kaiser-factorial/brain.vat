@@ -30,14 +30,17 @@ export default function AdminControlPanel() {
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
   const [criticalError, setCriticalError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState<string | null>(null)
+  const [manualBaseUrl, setManualBaseUrl] = useState<string | null>(null)
+  const [lastErrorTime, setLastErrorTime] = useState<number>(0)
 
-  const fetchSettings = useCallback(async (forcedSecret?: string) => {
+  const fetchSettings = useCallback(async (forcedSecret?: string, forcedBaseUrl?: string) => {
+    setIsLoading(true)
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const baseUrl = forcedBaseUrl || manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
       const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       // Fetch Bot Settings
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
-        headers: { 'X-Admin-Secret': adminSecret, 'Cache-Control': 'no-store' },
+        headers: { 'X-Admin-Secret': adminSecret },
         cache: 'no-store'
       })
       
@@ -87,17 +90,26 @@ export default function AdminControlPanel() {
 
       setSettings(finalSettings)
       
-      // If we got here, the secret we used is valid
+      // If we got here, the secret and URL we used are valid
       if (adminSecret) {
         setManualSecret(adminSecret)
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('brain_vat_admin_secret', adminSecret)
         }
       }
+      if (forcedBaseUrl || manualBaseUrl) {
+        setManualBaseUrl(baseUrl)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('brain_vat_manual_url', baseUrl)
+        }
+      }
       
       setMessage(null)
     } catch (error: any) {
-      console.error('Settings Fetch Error:', error)
+      if (error.message !== 'SECURE_ACCESS_REQUIRED') {
+        console.error('Settings Fetch Error:', error)
+      }
+      setLastErrorTime(Date.now())
       // Detect authentication required OR network failure (TypeError: Failed to fetch)
       // On network failure, we still want to show the prompt because the user might need to 
       // override the secret if they are using a tunnel or direct IP.
@@ -122,12 +134,14 @@ export default function AdminControlPanel() {
       return
     }
 
-    // Try to recover secret from session storage
+    // Try to recover secret and URL from storage
     if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('brain_vat_admin_secret')
-      if (saved) {
-        setManualSecret(saved)
-        fetchSettings(saved)
+      const savedSecret = sessionStorage.getItem('brain_vat_admin_secret')
+      const savedUrl = localStorage.getItem('brain_vat_manual_url')
+      if (savedUrl) setManualBaseUrl(savedUrl)
+      if (savedSecret) {
+        setManualSecret(savedSecret)
+        fetchSettings(savedSecret, savedUrl || undefined)
         return
       }
     }
@@ -139,6 +153,7 @@ export default function AdminControlPanel() {
     const botSettings = settings.find(s => s.bot === botKey)
     if (!botSettings) return
 
+    setIsLoading(true)
     setIsSaving(botKey)
     setMessage(null)
 
@@ -175,6 +190,7 @@ export default function AdminControlPanel() {
       setCriticalError(error.message || 'SYNC_PROTOCOL_FAILURE')
     } finally {
       setIsSaving(null)
+      setIsLoading(false)
     }
   }
 
@@ -229,22 +245,69 @@ export default function AdminControlPanel() {
       </div>
 
       {message?.text.includes('SECURE_ACCESS_REQUIRED') && (
-        <div className="max-w-xl mx-auto mb-12 border border-[#00ff41] bg-[#001500]/50 p-8 shadow-[0_0_20px_#00ff411a]">
-          <h2 className="text-xs uppercase tracking-[0.4em] mb-6 text-center text-[#99ffaa]">Administrative_Secret_Required</h2>
-          <div className="space-y-4">
-            <input 
-              type="password"
-              placeholder="ENTER_PASSPHRASE..."
-              className="w-full bg-black border border-[#00441b] p-4 text-xs text-center tracking-[0.5em] focus:border-[#00ff41] focus:outline-none transition-all"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = (e.target as HTMLInputElement).value;
-                  fetchSettings(val);
-                }
+        <div className={`max-w-xl mx-auto mb-12 border border-[#00ff41] bg-[#001500]/50 p-8 shadow-[0_0_20px_#00ff411a] relative overflow-hidden transition-transform duration-100 ${lastErrorTime > 0 ? 'animate-shake' : ''}`} key={lastErrorTime}>
+          {isLoading && (
+            <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-8 h-8 border-2 border-terminal-green border-t-transparent rounded-full animate-spin" />
+                <div className="text-[10px] uppercase tracking-widest animate-pulse">Verifying_Link...</div>
+              </div>
+            </div>
+          )}
+          <h2 className="text-xs uppercase tracking-[0.4em] mb-6 text-center text-[#99ffaa]">Administrative_Handshake_Required</h2>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="relative group">
+                <label className="text-[9px] uppercase text-[#00441b] mb-1 block tracking-widest">Inference Core URL</label>
+                <input 
+                  type="text"
+                  id="admin-url-input"
+                  defaultValue={manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}
+                  placeholder="http://localhost:5001"
+                  disabled={isLoading}
+                  className="w-full bg-black/40 border border-[#002200] p-3 text-[10px] tracking-wider focus:border-[#00ff41] focus:outline-none transition-all disabled:opacity-50 text-terminal-green"
+                />
+              </div>
+
+              <div className="relative group">
+                <label className="text-[9px] uppercase text-[#00441b] mb-1 block tracking-widest">Admin Secret</label>
+                <input 
+                  type="password"
+                  id="admin-secret-input"
+                  placeholder="ENTER_PASSPHRASE..."
+                  disabled={isLoading}
+                  className="w-full bg-black border border-[#00441b] p-4 text-xs text-center tracking-[0.5em] focus:border-[#00ff41] focus:outline-none transition-all disabled:opacity-50 shadow-[inset_0_0_10px_#00ff4105]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const secret = (document.getElementById('admin-secret-input') as HTMLInputElement).value;
+                      const url = (document.getElementById('admin-url-input') as HTMLInputElement).value;
+                      fetchSettings(secret, url);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                const secret = (document.getElementById('admin-secret-input') as HTMLInputElement).value;
+                const url = (document.getElementById('admin-url-input') as HTMLInputElement).value;
+                fetchSettings(secret, url);
               }}
-            />
+              disabled={isLoading}
+              className="w-full py-4 border border-[#00ff41] text-[#00ff41] text-[10px] font-black uppercase tracking-[0.4em] hover:bg-[#00ff41] hover:text-black transition-all disabled:opacity-50 active:scale-[0.98] shadow-[0_0_15px_#00ff4122]"
+            >
+              [ ESTABLISH_SECURE_LINK ]
+            </button>
+
+            {message?.text !== 'SECURE_ACCESS_REQUIRED' && (
+              <p className="text-[10px] text-red-500 uppercase text-center tracking-widest font-bold animate-pulse">
+                {message?.text.split('//')[1] || 'HANDSHAKE_REJECTED'}
+              </p>
+            )}
+
             <p className="text-[9px] text-[#00441b] uppercase text-center tracking-widest leading-relaxed">
-              Inference core endpoints are strictly isolated. Enter the admin secret to establish a secure handshake.
+              Connectivity failed with the current parameters. Verify your Local Inference Server is running or provide an alternate tunnel URL (Ngrok/Cloudflare).
             </p>
           </div>
         </div>
