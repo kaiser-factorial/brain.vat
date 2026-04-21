@@ -257,16 +257,16 @@ export default function AuditDashboard() {
               {/* Log Meta */}
               <div className="bg-[#001500] px-4 py-2 border-b border-[#00441b] flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                   <div className="w-1.5 h-1.5 rounded-full bg-[#00ff41] animate-pulse" />
-                   <span className="text-xs font-bold tracking-widest text-[#00ff41]">
-                     {log.bot_name.toUpperCase()}
-                   </span>
+                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${log.bot === 'a' ? 'bg-[#00ccff] shadow-[0_0_8px_#00ccff]' : 'bg-[#ffbf00] shadow-[0_0_8px_#ffbf00]'}`} />
+                  <span className={`text-xs font-bold tracking-widest ${log.bot === 'a' ? 'text-[#00ccff]' : 'text-[#ffbf00]'}`}>
+                    {log.bot_name.toUpperCase()}
+                  </span>
                 </div>
                 <div className="flex items-center gap-4">
                   {log.memory_trace && (
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#00ff41]/10 border border-[#00ff41]/30 rounded-full animate-fadeIn">
-                       <div className="w-1 h-1 rounded-full bg-[#00ff41]" />
-                       <span className="text-[8px] font-black uppercase tracking-widest text-[#00ff41]">Memory: {log.memory_trace}</span>
+                    <div className={`flex items-center gap-1.5 px-2 py-0.5 border rounded-full animate-fadeIn ${log.bot === 'a' ? 'bg-[#00ccff]/10 border-[#00ccff]/30' : 'bg-[#ffbf00]/10 border-[#ffbf00]/30'}`}>
+                      <div className={`w-1 h-1 rounded-full ${log.bot === 'a' ? 'bg-[#00ccff]' : 'bg-[#ffbf00]'}`} />
+                      <span className={`text-[8px] font-black uppercase tracking-widest ${log.bot === 'a' ? 'text-[#00ccff]' : 'text-[#ffbf00]'}`}>Memory: {log.memory_trace}</span>
                     </div>
                   )}
                   <span className="text-[10px] text-[#008f11] font-bold">

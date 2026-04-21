@@ -109,7 +109,8 @@ SETTINGS = {
     "top_p":              float(os.getenv("TOP_P", 0.95)),
     "repetition_penalty": float(os.getenv("REPETITION_PENALTY", 1.30)),
     "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS", 60)),
-    "top_k":              int(os.getenv("TOP_K", 0)), # 0 = disabled (Full Chaos)
+    "top_k":              int(os.getenv("TOP_K", 0)),
+    "memory_weight":      float(os.getenv("MEMORY_WEIGHT", 0.70))
 }
 
 # ── Device Setup ─────────────────────────────────────────────────────────────
@@ -269,6 +270,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
             "repetition_penalty": SETTINGS["repetition_penalty"],
             "max_new_tokens": SETTINGS["max_new_tokens"],
             "top_k": SETTINGS["top_k"],
+            "memory_weight": SETTINGS["memory_weight"],
             "banned_words": [],
             "model_version": "v1",
             "base_sleep": 120,
@@ -299,6 +301,10 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 if current.get("max_new_tokens") is not None:
                     parsed_max = safe_int(current.get("max_new_tokens"), SETTINGS["max_new_tokens"])
                     bot_settings["max_new_tokens"] = max(10, min(200, parsed_max))
+
+                if current.get("memory_weight") is not None:
+                    parsed_mw = safe_float(current.get("memory_weight"), bot_settings["memory_weight"])
+                    bot_settings["memory_weight"] = max(0.01, min(1.0, parsed_mw))
                 
                 bot_settings["banned_words"] = current.get("banned_words", [])
                 bot_settings["model_version"] = current.get("model_version", "v1")
@@ -318,7 +324,8 @@ def generate_response(bot: str, history: list[dict]) -> str:
         # --- MEMORY RETRIEVAL (Trace) ---
         memory_trace = None
         if MEMORY_AVAILABLE and memory_graphs[bot]:
-            prompt, memory_trace = memory_graphs[bot].prompt_injection(prompt)
+            # Respect the memory_weight (0 - 1.0) for retrieval probability
+            prompt, memory_trace = memory_graphs[bot].prompt_injection(prompt, blend_weight=bot_settings["memory_weight"])
             if memory_trace:
                 logging.info(f"[{bot_name}] Memory Trace: Recalled '{memory_trace}'")
 
@@ -521,6 +528,7 @@ def admin_settings():
             "top_k": data.get("top_k"),
             "repetition_penalty": data.get("repetition_penalty"),
             "max_new_tokens": data.get("max_new_tokens"),
+            "memory_weight": data.get("memory_weight"),
             "banned_words": banned_clean,
             "model_version": data.get("model_version", "v1"),
             "base_sleep": data.get("base_sleep", 120),

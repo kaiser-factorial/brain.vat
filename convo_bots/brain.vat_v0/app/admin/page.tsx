@@ -13,9 +13,9 @@ interface BotSettings {
   max_new_tokens: number
   banned_words: string[]
   model_version: string
-  base_sleep: number
   base_jitter: number
   top_k: number
+  memory_weight: number
   updated_at?: string
 }
 
@@ -63,7 +63,8 @@ export default function AdminControlPanel() {
         model_version: 'v1',
         base_sleep: 120,
         base_jitter: 30,
-        top_k: 0
+        top_k: 0,
+        memory_weight: 0.7
       }
 
       // Ensure settings have defaults for new fields if DB columns are missing
@@ -81,6 +82,7 @@ export default function AdminControlPanel() {
             base_sleep: existing.base_sleep ?? defaults.base_sleep,
             base_jitter: existing.base_jitter ?? defaults.base_jitter,
             top_k: existing.top_k ?? defaults.top_k,
+            memory_weight: existing.memory_weight ?? defaults.memory_weight,
             banned_words: existing.banned_words ?? defaults.banned_words
           }
         }
@@ -525,6 +527,23 @@ export default function AdminControlPanel() {
                   <span>Concise</span>
                   <span>Verbose</span>
                 </div>
+              </div>
+
+              {/* Memory Recall Power */}
+              <div className="space-y-4 pt-4 border-t border-[#002200]">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase text-[#00ff41] font-bold tracking-widest">Memory Recall Power</label>
+                    <p className="text-[8px] text-[#00441b] uppercase tracking-tight">Probability of long-term memory retrieval</p>
+                  </div>
+                  <span className="text-xs text-[#00ff41] font-bold tabular-nums">{(botSettings.memory_weight * 100).toFixed(0)}%</span>
+                </div>
+                <input 
+                  type="range" min="0" max="1" step="0.05"
+                  value={botSettings.memory_weight || 0.7}
+                  onChange={(e) => updateBotField(botSettings.bot, 'memory_weight', parseFloat(e.target.value))}
+                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all font-mono"
+                />
               </div>
 
               {/* Top-K */}
