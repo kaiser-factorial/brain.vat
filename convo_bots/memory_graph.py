@@ -165,6 +165,10 @@ class MemoryGraph:
         
         return self.remember_phrases(phrases, source_text=generated_text)
 
+    def remember(self, text: str) -> list[str]:
+        """Alias for forward compatibility with orchestrator.py."""
+        return self.curate_and_remember(text)
+
     def remember_phrases(self, phrases: list[str], source_text: str = "") -> list[str]:
         """Add concepts to the graph and sync to persistent tiers.
         
@@ -206,13 +210,13 @@ class MemoryGraph:
         sorted_c = sorted(self._concepts.items(), key=lambda x: x[1], reverse=True)
         return [c for c, _ in sorted_c[:n]]
 
-    def prompt_injection(self, base_prompt: str, blend_weight: float = 0.45) -> str:
+    def prompt_injection(self, base_prompt: str, blend_weight: float = 0.45) -> tuple[str, str | None]:
         """Blend a memory concept into a prompt with probability blend_weight."""
         if random.random() > blend_weight:
-            return base_prompt
+            return base_prompt, None
         top = self.obsessions(6)
         if not top:
-            return base_prompt
+            return base_prompt, None
         concept = random.choice(top[:3])   # bias toward top 3
         templates = [
             f"{concept} — {base_prompt}",
@@ -221,7 +225,7 @@ class MemoryGraph:
             f"{base_prompt} (always {concept})",
             f"through {concept}, {base_prompt}",
         ]
-        return random.choice(templates)
+        return random.choice(templates), concept
 
     def related_to(self, word: str, n: int = 5) -> list[str]:
         """Return concepts most co-occurring with a given word."""

@@ -229,7 +229,7 @@ def strip_dialogue_prefix(text: str, name: str) -> str:
         if next_turn != -1: text = text[:next_turn].strip()
     return text
 
-def log_prompt(bot: str, prompt: str, response: str, settings: dict = None):
+def log_prompt(bot: str, prompt: str, response: str, settings: dict = None, memory_trace: str = None, suppressor_log: list = None):
     """Log the raw prompt and response for auditing with thread-safety."""
     try:
         log_entry = {
@@ -238,7 +238,9 @@ def log_prompt(bot: str, prompt: str, response: str, settings: dict = None):
             "bot_name": BOT_A_NAME if bot == "a" else BOT_B_NAME,
             "settings": settings.copy() if settings else {},
             "prompt": prompt,
-            "response": response
+            "response": response,
+            "memory_trace": memory_trace,
+            "suppressor_log": suppressor_log or []
         }
         with logging_lock:
             with open(PROMPT_AUDIT_LOG, "a") as f:
@@ -312,6 +314,14 @@ def generate_response(bot: str, history: list[dict]) -> str:
             bot_settings["max_new_tokens"] = SETTINGS["max_new_tokens"]
 
         prompt = build_enhanced_dialogue_prompt(history, bot)
+        
+        # --- MEMORY RETRIEVAL (Trace) ---
+        memory_trace = None
+        if MEMORY_AVAILABLE and memory_graphs[bot]:
+            prompt, memory_trace = memory_graphs[bot].prompt_injection(prompt)
+            if memory_trace:
+                logging.info(f"[{bot_name}] Memory Trace: Recalled '{memory_trace}'")
+
         inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
         prompt_len = inputs["input_ids"].shape[1]
 
@@ -380,8 +390,15 @@ def generate_response(bot: str, history: list[dict]) -> str:
         raw = tokenizers[bot].decode(output[0][prompt_len:], skip_special_tokens=True)
         response_text = strip_dialogue_prefix(raw, bot_name)
         
-        # AUDIT: Log the interaction
-        log_prompt(bot, prompt, response_text, settings=bot_settings)
+        # AUDIT: Log the interaction with deep diagnostics
+        log_prompt(
+            bot, 
+            prompt, 
+            response_text, 
+            settings=bot_settings, 
+            memory_trace=memory_trace,
+            suppressor_log=clean_words # The list of words used for bad_words_ids
+        )
         
         return response_text
     except Exception as e:

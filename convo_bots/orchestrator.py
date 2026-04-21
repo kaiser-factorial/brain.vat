@@ -156,7 +156,9 @@ def bot_turn(
         log.info(f"[{bot_name}] No tweet from @{other_username}, using fallback prompt.")
 
     # 2. Blend memory obsessions into the prompt
-    prompt = memory.prompt_injection(base_prompt, blend_weight=0.45)
+    prompt, concept = memory.prompt_injection(base_prompt, blend_weight=0.45)
+    if concept:
+        log.info(f"[{bot_name}] Memory Trace: Recalled '{concept}'")
     log.info(f"[{bot_name}] Prompt: '{prompt}'")
 
     # 3. Generate

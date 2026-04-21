@@ -10,6 +10,17 @@ interface AuditLog {
   bot_name: string
   prompt: string
   response: string
+  settings?: {
+    temperature: number
+    top_p: number
+    top_k?: number
+    repetition_penalty?: number
+    max_new_tokens?: number
+    banned_words?: string[]
+    model_version?: string
+  }
+  memory_trace?: string | null
+  suppressor_log?: string[]
 }
 
 export default function AuditDashboard() {
@@ -251,9 +262,17 @@ export default function AuditDashboard() {
                      {log.bot_name.toUpperCase()}
                    </span>
                 </div>
-                <span className="text-[10px] text-[#008f11] font-bold">
-                  {new Date(log.timestamp).toLocaleTimeString()} // {new Date(log.timestamp).toLocaleDateString()}
-                </span>
+                <div className="flex items-center gap-4">
+                  {log.memory_trace && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#00ff41]/10 border border-[#00ff41]/30 rounded-full animate-fadeIn">
+                       <div className="w-1 h-1 rounded-full bg-[#00ff41]" />
+                       <span className="text-[8px] font-black uppercase tracking-widest text-[#00ff41]">Memory: {log.memory_trace}</span>
+                    </div>
+                  )}
+                  <span className="text-[10px] text-[#008f11] font-bold">
+                    {new Date(log.timestamp).toLocaleTimeString()} // {new Date(log.timestamp).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
               
               <div className="p-5 space-y-6">
@@ -278,20 +297,69 @@ export default function AuditDashboard() {
                   </div>
                 </div>
 
-                {/* Diagnostics Feed */}
-                <div className="pt-3 border-t border-[#002200] flex flex-wrap gap-6 text-[9px] text-[#006600] font-bold tracking-widest">
-                   <div className="flex items-center gap-2">
-                     <span className="text-[#008f11]">FIDELITY:</span>
-                     <span className="text-[#00ff41]">OPTIMAL</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <span className="text-[#008f11]">ENTROPY_CHECK:</span>
-                     <span className="text-[#00ff41]">PASSED</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <span className="text-[#008f11]">LINEAGE:</span>
-                     <span className="text-[#00ff41]">TRACED</span>
-                   </div>
+                {/* Diagnostics Feed / Hyperparameters */}
+                <div className="pt-4 border-t border-[#002200] space-y-4">
+                  {log.settings && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                      <div className="bg-[#001100] border border-[#002200] p-2 rounded-sm group/param hover:border-[#00ff41]/30 transition-all">
+                        <div className="text-[7px] text-[#006600] uppercase font-black mb-1">Temperature</div>
+                        <div className="text-[10px] text-[#00ff41] font-bold tabular-nums">{log.settings.temperature?.toFixed(2) || 'N/A'}</div>
+                      </div>
+                      <div className="bg-[#001100] border border-[#002200] p-2 rounded-sm group/param hover:border-[#00ff41]/30 transition-all">
+                        <div className="text-[7px] text-[#006600] uppercase font-black mb-1">Top-P</div>
+                        <div className="text-[10px] text-[#00ff41] font-bold tabular-nums">{log.settings.top_p?.toFixed(2) || 'N/A'}</div>
+                      </div>
+                      <div className="bg-[#001100] border border-[#002200] p-2 rounded-sm group/param hover:border-[#00ff41]/30 transition-all">
+                        <div className="text-[7px] text-[#006600] uppercase font-black mb-1">Penalty</div>
+                        <div className="text-[10px] text-[#00ff41] font-bold tabular-nums">{log.settings.repetition_penalty?.toFixed(2) || '1.30'}</div>
+                      </div>
+                      <div className="bg-[#001100] border border-[#002200] p-2 rounded-sm group/param hover:border-[#00ff41]/30 transition-all">
+                        <div className="text-[7px] text-[#006600] uppercase font-black mb-1">Limit</div>
+                        <div className="text-[10px] text-[#00ff41] font-bold tabular-nums">{log.settings.max_new_tokens || '55'}t</div>
+                      </div>
+                      <div className="bg-[#001100] border border-[#002200] p-2 rounded-sm group/param hover:border-[#00ff41]/30 transition-all">
+                        <div className="text-[7px] text-[#006600] uppercase font-black mb-1">Filter</div>
+                        <div className="text-[10px] text-[#00ff41] font-bold tabular-nums">{log.settings.banned_words?.length || 0} tokens</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Suppressor Details (Collapsible) */}
+                  {log.suppressor_log && log.suppressor_log.length > 0 && (
+                    <div className="mt-4 border-t border-[#002200]/50 pt-4">
+                      <details className="group/suppressor">
+                        <summary className="list-none cursor-pointer flex items-center gap-2 text-[8px] uppercase tracking-widest text-[#00441b] hover:text-[#00ff41] transition-colors font-bold">
+                          <span className="group-open/suppressor:rotate-90 transition-transform">▶</span>
+                          <span>Suppressor_Diagnostics // {log.suppressor_log.length} Active_Tokens</span>
+                        </summary>
+                        <div className="mt-4 flex flex-wrap gap-2 animate-fadeIn">
+                          {log.suppressor_log.map((word, wIdx) => (
+                            <span 
+                              key={wIdx} 
+                              className="px-2 py-1 bg-[#002200]/30 border border-[#00441b]/30 text-[9px] text-[#008f11] rounded-sm hover:border-[#00ff41]/50 hover:text-[#00ff41] transition-all cursor-default"
+                            >
+                              {word}
+                            </span>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-6 text-[9px] text-[#006600] font-bold tracking-widest pt-2">
+                     <div className="flex items-center gap-2">
+                       <span className="text-[#008f11]">FIDELITY:</span>
+                       <span className="text-[#00ff41]">OPTIMAL</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="text-[#008f11]">ENTROPY_CHECK:</span>
+                       <span className="text-[#00ff41]">PASSED</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="text-[#008f11]">VERSION:</span>
+                       <span className="text-[#00ff41]">{log.settings?.model_version || 'v1.0'}</span>
+                     </div>
+                  </div>
                 </div>
               </div>
             </div>
