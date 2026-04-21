@@ -13,6 +13,7 @@ interface BotSettings {
   max_new_tokens: number
   banned_words: string[]
   model_version: string
+  base_sleep: number
   base_jitter: number
   top_k: number
   memory_weight: number
@@ -185,8 +186,11 @@ export default function AdminControlPanel() {
 
       if (!res.ok) throw new Error('SAVE_FAILED')
       
+      // Finalize sync success
       setShowSuccess(`BOT_${botKey.toUpperCase()}_PARAMETERS_PUSHED`)
-      setTimeout(() => setShowSuccess(null), 2500)
+      setTimeout(() => setShowSuccess(null), 3000)
+      
+      // Silent refresh to ensure local state matches DB
       fetchSettings()
     } catch (error: any) {
       setCriticalError(error.message || 'SYNC_PROTOCOL_FAILURE')

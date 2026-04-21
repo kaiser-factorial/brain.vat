@@ -139,7 +139,7 @@ def update_bot_settings(sb_client, bot: str, settings: Dict) -> bool:
         return False
     try:
         # Atomic-ish transition: 
-        # 1. Prepare new payload first
+        # 1. Prepare new payload as ACTIVE immediately
         payload = {
             "bot": bot,
             **settings,
@@ -147,22 +147,22 @@ def update_bot_settings(sb_client, bot: str, settings: Dict) -> bool:
             "updated_at": datetime.now().isoformat()
         }
 
-        # 2. Deactivate current active settings ONLY after we are ready to insert
-        # NOTE: This approach is slightly risky without a true transaction,
-        # but combined with the frontend's 'Reconstruction' logic, it ensures stability.
+        # 2. Insert new settings FIRST (Ensures no "settings blackout" for the frontend)
+        res = sb_client.table("bot_settings").insert(payload).execute()
+        
+        # 3. Prune old records: Deactivate all rows for this bot that aren't the one we just inserted
+        # Note: We use the timestamp as a proxy if we don't have the new ID immediately, 
+        # but the safest way is to deactivate anything older than "now".
         sb_client.table("bot_settings") \
             .update({"is_active": False}) \
             .eq("bot", bot) \
+            .neq("updated_at", payload["updated_at"]) \
             .eq("is_active", True) \
             .execute()
             
-        # 3. Insert new settings as active
-        sb_client.table("bot_settings").insert(payload).execute()
         return True
     except Exception as e:
-        # If deactivation failed to clear all active rows (race condition),
-        # the Unique Index in SQL will stop the insert and throw an error here.
-        logging.error(f"CRITICAL_SYNC_ERROR for {bot}: {e}")
+        logging.error(f"DATABASE_SYNC_FAILURE for {bot}: {e}")
         return False
 
 

@@ -509,31 +509,7 @@ def admin_settings():
         if not data:
             return jsonify({"error": "MISSING_OR_INVALID_JSON_PAYLOAD"}), 400
             
-        bot = data.get("bot")
-        if bot not in ("a", "b"): abort(400)
-        
-        # Validate and clean banned_words
-        banned_raw = data.get("banned_words", [])
-        if not isinstance(banned_raw, list):
-            logging.error(f"Invalid banned_words format received: {type(banned_raw)}")
-            return jsonify({"status": "error", "message": "BANNED_WORDS_MUST_BE_ARRAY"}), 400
-        
-        # Ensure all items are strings and non-empty
-        banned_clean = [str(w).strip() for w in banned_raw if str(w).strip()]
-        
-        # Strip internal keys from settings
-        settings = {
-            "temperature": data.get("temperature"),
-            "top_p": data.get("top_p"),
-            "top_k": data.get("top_k"),
-            "repetition_penalty": data.get("repetition_penalty"),
-            "max_new_tokens": data.get("max_new_tokens"),
-            "memory_weight": data.get("memory_weight"),
-            "banned_words": banned_clean,
-            "model_version": data.get("model_version", "v1"),
-            "base_sleep": data.get("base_sleep", 120),
-            "base_jitter": data.get("base_jitter", 30)
-        }
+        logging.info(f"[ADMIN] Syncing params for {bot}. Memory_P: {settings['memory_weight']} (Raw: {memory_weight_raw})")
         
         success = update_bot_settings(sb_client, bot, settings)
         if success:
