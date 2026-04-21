@@ -53,7 +53,10 @@ export default function AuditDashboard() {
       }
     } catch (error: any) {
       console.error('Audit Fetch Error:', error)
-      setErrorStatus(error.message || 'UNKNOWN_COMM_ERROR')
+      // On TypeError (Failed to fetch), we force the SECURE_ACCESS_REQUIRED state 
+      // so the user can see the password input even if the server is unreachable.
+      const isSecReq = error.message === 'SECURE_ACCESS_REQUIRED' || error.name === 'TypeError'
+      setErrorStatus(isSecReq ? 'SECURE_ACCESS_REQUIRED' : (error.message || 'UNKNOWN_COMM_ERROR'))
     } finally {
       setIsLoading(false)
     }

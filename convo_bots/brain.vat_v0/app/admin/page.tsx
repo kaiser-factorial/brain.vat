@@ -21,7 +21,7 @@ interface BotSettings {
 
 export default function AdminControlPanel() {
   const { user, isLoading: authLoading } = useAuth()
-  const { loopDetails, loopPauses, refreshStatus } = useSystemStatus()
+  const { loopDetails, refreshStatus } = useSystemStatus()
   const router = useRouter()
   const [settings, setSettings] = useState<BotSettings[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -98,12 +98,15 @@ export default function AdminControlPanel() {
       setMessage(null)
     } catch (error: any) {
       console.error('Settings Fetch Error:', error)
-      if (error.message === 'SECURE_ACCESS_REQUIRED') {
-        // Flush invalid or missing secret from session storage to prevent stuck loops
+      // Detect authentication required OR network failure (TypeError: Failed to fetch)
+      // On network failure, we still want to show the prompt because the user might need to 
+      // override the secret if they are using a tunnel or direct IP.
+      if (error.message === 'SECURE_ACCESS_REQUIRED' || error.name === 'TypeError') {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('brain_vat_admin_secret')
         }
-        setMessage({ text: 'SECURE_ACCESS_REQUIRED // INVALID_OR_MISSING_PASSPHRASE', type: 'error' })
+        const errTag = error.name === 'TypeError' ? 'HANDSHAKE_FAILED_LOCAL_SERVER_OFFLINE' : 'INVALID_OR_MISSING_PASSPHRASE'
+        setMessage({ text: `SECURE_ACCESS_REQUIRED // ${errTag}`, type: 'error' })
       } else if (!error.message?.includes('Lock "lock:sb-')) {
         setMessage({ text: error.message || 'COMMUNICATION_FAILURE', type: 'error' })
       }
@@ -181,25 +184,7 @@ export default function AdminControlPanel() {
     ))
   }
 
-  const togglePause = async (botKey: string, currentState: boolean) => {
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
-      const adminSecret = manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
-      const res = await fetch(`${baseUrl}/api/admin/pause/${botKey}`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Admin-Secret': adminSecret
-        },
-        body: JSON.stringify({ paused: !currentState })
-      })
-      if (!res.ok) throw new Error('PAUSE_TOGGLE_FAILED')
-      refreshStatus()
-    } catch (err) {
-      console.error(err)
-      setCriticalError('Failed to toggle loop state.')
-    }
-  }
+
 
   if (authLoading || (isLoading && !message)) {
     return (
@@ -345,16 +330,7 @@ export default function AdminControlPanel() {
                 </span>
               </div>
               <div className="flex items-center gap-4 text-right">
-                <button
-                  onClick={() => togglePause(botSettings.bot, loopPauses?.[botSettings.bot as 'a' | 'b'] || false)}
-                  className={`text-[8px] uppercase tracking-widest px-3 py-1 border transition-colors ${
-                    loopPauses?.[botSettings.bot as 'a' | 'b'] 
-                      ? 'border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-black shadow-[0_0_10px_#eab308]' 
-                      : 'border-[#00441b] text-[#008f11] hover:border-[#00ff41] hover:text-[#00ff41]'
-                  }`}
-                >
-                  {loopPauses?.[botSettings.bot as 'a' | 'b'] ? '[ SYSTEM_PAUSED ]' : '[ PAUSE_LOOP ]'}
-                </button>
+
                 <div className="flex flex-col items-end">
                   {/* Loop Status Pill */}
                   <div className={`text-[8px] font-black px-2 py-0.5 mb-1 tracking-tighter rounded-full ${loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'bg-[#00ff41] text-black shadow-[0_0_10px_#00ff41]' : 'border border-[#00441b] text-[#00441b]'}`}>
