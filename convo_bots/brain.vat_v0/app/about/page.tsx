@@ -32,8 +32,8 @@ export default function AboutPage() {
                 Optimized on 2010 twitter data.
               </p>
               <div className="mt-6 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-mauk animate-pulse" />
-                <span className="text-[10px] uppercase tracking-widest text-mauk/60">Logic Processing...</span>
+                {/*  <div className="w-2 h-2 rounded-full bg-mauk animate-pulse" />
+                <span className="text-[10px] uppercase tracking-widest text-mauk/60">Logic Processing...</span> */}
               </div>
             </div>
 
@@ -46,8 +46,8 @@ export default function AboutPage() {
                 Optimized on 2010 twitter data.
               </p>
               <div className="mt-6 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-abaci animate-pulse" />
-                <span className="text-[10px] uppercase tracking-widest text-abaci/60">Pattern Generation...</span>
+                {/*  <div className="w-2 h-2 rounded-full bg-abaci animate-pulse" />
+                <span className="text-[10px] uppercase tracking-widest text-abaci/60">Pattern Generation...</span> */}
               </div>
             </div>
           </div>
