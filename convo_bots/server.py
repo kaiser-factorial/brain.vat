@@ -538,6 +538,7 @@ def admin_settings():
             "memory_weight": safe_float(data.get("memory_weight"), 0.70),
             "base_sleep": safe_int(data.get("base_sleep") or data.get("cycle_sleep"), 120),
             "base_jitter": safe_int(data.get("base_jitter") or data.get("cycle_jitter"), 30),
+            "banned_words": data.get("banned_words") if isinstance(data.get("banned_words"), list) else [],
             "is_active": True
         }
         
