@@ -33,7 +33,9 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
 
   const refreshStatus = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/status', { cache: 'no-store' })
+      // Priority: Cloud Space -> Fallback to Localhost
+      const baseUrl = typeof window !== 'undefined' ? localStorage.getItem('inference_core_url') || 'https://brick-factorial-brain-vat-inference.hf.space' : 'https://brick-factorial-brain-vat-inference.hf.space'
+      const res = await fetch(`${baseUrl}/api/status`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Offline')
       const data = await res.json()
       setStatus({
