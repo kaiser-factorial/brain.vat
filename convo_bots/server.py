@@ -48,6 +48,10 @@ try:
     )
     SUPABASE_UTILS_AVAILABLE = True
     sb_client = get_supabase_client()
+    if sb_client:
+        logging.info("✔ Supabase client initialized successfully.")
+    else:
+        logging.warning("✖ Supabase client FAILED to initialize. Check if SUPABASE_URL and SUPABASE_SERVICE_KEY are set in Secrets.")
 except ImportError:
     SUPABASE_UTILS_AVAILABLE = False
     logging.warning("supabase_utils.py not found")
