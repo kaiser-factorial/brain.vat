@@ -179,7 +179,8 @@ def ensure_model(bot: str):
 
     try:
         logging.info(f"Loading {bot} into RAM...")
-        tokenizer = AutoTokenizer.from_pretrained(path, token=os.getenv("HF_TOKEN"))
+        # Use standard 'gpt2' tokenizer to avoid local JSON corruption issues
+        tokenizer = AutoTokenizer.from_pretrained("gpt2", token=os.getenv("HF_TOKEN"))
         tokenizer.pad_token = tokenizer.eos_token
         
         model = AutoModelForCausalLM.from_pretrained(
@@ -277,8 +278,8 @@ def generate_response(bot: str, history: list[dict]) -> str:
             "memory_weight": SETTINGS["memory_weight"],
             "banned_words": [],
             "model_version": "v1",
-            "base_sleep": 120,
-            "base_jitter": 30
+            "base_sleep": 40,
+            "base_jitter": 15
         }
         
         if SUPABASE_UTILS_AVAILABLE and sb_client:
@@ -666,6 +667,7 @@ def autonomous_loop_worker():
                 except: pass
 
             text = generate_response(next_bot, db_history)
+            logging.info(f"[Loop] {bot_name} said: {text}")
             
             if text and text not in ["(model warming up...)", "(silence)"]:
                 if SUPABASE_UTILS_AVAILABLE and sb_client:
