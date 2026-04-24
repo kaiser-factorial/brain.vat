@@ -40,7 +40,7 @@ Thumbs.db
 .env*.local
 
 # ── Project Scope (Exclude from deployment) ────────────────────
-training/
+training/shared/corpus/to clean/
 planning_md/
 backups/
 brain-vat-hf-deploy/
