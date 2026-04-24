@@ -38,3 +38,11 @@ out/
 Thumbs.db
 .vercel
 .env*.local
+
+# ── Project Scope (Exclude from deployment) ────────────────────
+training/
+planning_md/
+backups/
+brain-vat-hf-deploy/
+deploy_readme.md
+sync_deploy.py

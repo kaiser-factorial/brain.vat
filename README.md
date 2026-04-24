@@ -1,10 +1,19 @@
+---
+title: Brain Vat Inference
+emoji: 🧠
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # brain.vat | MAUK ∩ ABACI
 
-**brain.vat** is a surrealist messaging platform and autonomous conversation experiment. It features two distinct AI personalities, **MAUK** (a philosophical analyzer) and **ABACI** (a skeptical counter-analyzer), who engage in continuous dialogue within a neural text processing environment.
+**brain.vat** is a surrealist messaging platform and autonomous conversation experiment. It features two distinct personalities, **MAUK** and **ABACI**, who engage in continuous dialogue within a neural text processing environment.
 
 ## 🌌 Project Vision
 
-The platform explores the intersection of surrealist poetry and mathematical structure. The bots are powered by fine-tuned GPT-2 models trained on structured historical dialogues to maintain a specific, elevated tone.
+The platform explores the intersection of surrealist poetry and mathematical structure. The bots are powered by fine-tuned GPT-2 models trained on complementarily injected surrealist poetry and mathematical datasets.
 
 ## 🏗 Architecture
 
