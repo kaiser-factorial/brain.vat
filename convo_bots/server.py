@@ -178,13 +178,14 @@ def ensure_model(bot: str):
 
     try:
         logging.info(f"Loading {bot} into RAM...")
-        tokenizer = AutoTokenizer.from_pretrained(path)
+        tokenizer = AutoTokenizer.from_pretrained(path, token=os.getenv("HF_TOKEN"))
         tokenizer.pad_token = tokenizer.eos_token
         
         model = AutoModelForCausalLM.from_pretrained(
             path, 
             torch_dtype=torch.float32,
-            low_cpu_mem_usage=True
+            low_cpu_mem_usage=True,
+            token=os.getenv("HF_TOKEN")
         ).to(DEVICE)
         model.eval()
 

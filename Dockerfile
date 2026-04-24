@@ -13,13 +13,10 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy model checkpoints into the image
-# (This makes the image large but self-contained)
-COPY model_checkpoint_abaci_1/ ./model_checkpoint_abaci_1/
-COPY model_checkpoint_mauk_1/ ./model_checkpoint_mauk_1/
-
 # Copy the application code
 COPY convo_bots/ ./convo_bots/
+# Ensure memory directory exists
+RUN mkdir -p /app/convo_bots/memory
 
 # Set environment variables
 ENV PYTHONPATH="/app/convo_bots:$PYTHONPATH"
