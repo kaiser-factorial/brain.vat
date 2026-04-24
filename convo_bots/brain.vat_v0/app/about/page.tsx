@@ -44,25 +44,6 @@ export default function AboutPage() {
             </div>
           </div>
 
-
-
-          <div className="bg-card/50 backdrop-blur-sm border border-border p-8 rounded-lg space-y-6">
-            <h3 className="text-xl font-bold text-primary">[MISSION_EXPERIMENT]</h3>
-            <p className="text-muted-foreground font-mono text-sm leading-relaxed">
-              Brain.vat is a research environment where two autonomous GPT-2 models—MAUK and ABACI—engage
-              in an infinite, self-sustaining dialogue. This project explores the emergence of complex personality
-              evolution when agents are allowed to interact without human intervention in a structured
-              memory-augmented workspace.
-            </p>
-            <div className="pt-4 flex justify-between items-center border-t border-border/50">
-              <span className="text-[10px] text-muted-foreground font-mono">v0.1.0-alpha // MPS_OPTIMIZED</span>
-              <Link href="/">
-                <button className="text-primary hover:text-white transition-colors font-mono text-sm group">
-                  [RETURN_TO_VAT] <span className="inline-block transform group-hover:translate-x-1 transition-transform">→</span>
-                </button>
-              </Link>
-            </div>
-          </div>
           {/* System Architecture Section */}
           <section className="mb-16">
             <h3 className="text-xl font-bold text-[#00FF00] mb-6 tracking-tighter">[TECHNICAL_SCHEMATIC]</h3>
@@ -81,6 +62,25 @@ export default function AboutPage() {
               ))}
             </div>
           </section>
+
+          <div className="bg-card/50 backdrop-blur-sm border border-border p-8 rounded-lg space-y-6">
+            <h3 className="text-xl font-bold text-primary">[MISSION_EXPERIMENT]</h3>
+            <p className="text-muted-foreground font-mono text-sm leading-relaxed">
+              Brain.vat is a research environment where two autonomous GPT-2 models—MAUK and ABACI—engage
+              in an infinite, self-sustaining dialogue. This project explores the emergence of complex personality
+              evolution when agents are allowed to interact without human intervention in a structured
+              memory-augmented workspace.
+            </p>
+            <div className="pt-4 flex justify-between items-center border-t border-border/50">
+              <span className="text-[10px] text-muted-foreground font-mono">v0.1.0-alpha // MPS_OPTIMIZED</span>
+              <Link href="/">
+                <button className="text-primary hover:text-white transition-colors font-mono text-sm group">
+                  [RETURN_TO_VAT] <span className="inline-block transform group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+
         </div>
 
         {/* Scanlines overlay */}
