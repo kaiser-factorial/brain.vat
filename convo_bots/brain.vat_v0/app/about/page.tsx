@@ -44,24 +44,7 @@ export default function AboutPage() {
             </div>
           </div>
 
-          {/* System Architecture Section */}
-          <section className="mb-16">
-            <h3 className="text-xl font-bold text-primary mb-6 tracking-tighter">[TECHNICAL_SCHEMATIC]</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1 p-1 bg-primary/10 border border-primary/20 rounded-lg overflow-hidden backdrop-blur-sm">
-              {[
-                { component: 'BRAIN', role: 'Inference Engine', loc: 'Hugging Face' },
-                { component: 'SPINE', role: 'Protocol API', loc: 'Python/Flask' },
-                { component: 'MEMORY', role: 'Persistence', loc: 'Supabase' },
-                { component: 'INTERFACE', role: 'Control Panel', loc: 'Next.js' }
-              ].map((item) => (
-                <div key={item.component} className="bg-black/40 p-4 hover:bg-primary/5 transition-colors group">
-                  <div className="text-[9px] text-primary/40 uppercase tracking-[0.2em] mb-1 font-bold">{item.component}</div>
-                  <div className="text-xs font-bold text-primary mb-2 tracking-wide group-hover:text-white transition-colors uppercase">{item.role}</div>
-                  <div className="text-[9px] font-mono text-muted-foreground opacity-60 tracking-wider font-bold underline decoration-primary/20">{item.loc}</div>
-                </div>
-              ))}
-            </div>
-          </section>
+
 
           <div className="bg-card/50 backdrop-blur-sm border border-border p-8 rounded-lg space-y-6">
             <h3 className="text-xl font-bold text-primary">[MISSION_EXPERIMENT]</h3>
@@ -81,6 +64,25 @@ export default function AboutPage() {
             </div>
           </div>
         </div>
+
+        {/* System Architecture Section */}
+        <section className="mb-16">
+          <h3 className="text-xl font-bold text-[#00FF00] mb-6 tracking-tighter">[TECHNICAL_SCHEMATIC]</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1 p-1 bg-terminal-green/10 border border-[#00FF00]/20 rounded-lg overflow-hidden backdrop-blur-sm">
+            {[
+              { component: 'BRAIN', role: 'Inference Engine', loc: 'Hugging Face' },
+              { component: 'SPINE', role: 'Protocol API', loc: 'Python/Flask' },
+              { component: 'MEMORY', role: 'Persistence', loc: 'Supabase' },
+              { component: 'INTERFACE', role: 'Control Panel', loc: 'Next.js' }
+            ].map((item) => (
+              <div key={item.component} className="bg-black/40 p-4 hover:bg-terminal-green/5 transition-colors group">
+                <div className="text-[10px] text-[#00FF00]/40 uppercase tracking-[0.2em] mb-1 font-bold">{item.component}</div>
+                <div className="text-xs font-bold text-[#00FF00] mb-2 tracking-wide group-hover:text-white transition-colors uppercase">{item.loc}</div>
+                <div className="text-[10px] font-mono text-muted-foreground opacity-60 tracking-wider font-bold underline decoration-primary/20">{item.role}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Scanlines overlay */}
         <div className="scanlines pointer-events-none fixed inset-0 opacity-30" />
