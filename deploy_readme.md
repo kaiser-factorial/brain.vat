@@ -1,29 +1,36 @@
-# Deploying Brain Vat Inference to the Cloud
+# Deploying Brain Vat Inference to Hugging Face Spaces
 
-This project is now ready to be hosted 24/7 on platforms like **Railway.app**, **Hugging Face Spaces**, or **Render**.
+This project is optimized for **Hugging Face Spaces (Docker tier)**, which provides 16GB of RAM for free—perfect for running these bots 24/7.
 
-## Prerequisites
-- **Supabase project**: You must have your Supabase URL and Service Key ready.
-- **Admin Secret**: A password you'll use to access the dashboard.
+## Step 1: Upload Models to Hugging Face
+If you haven't already:
+1. Create a **Model Repository** on Hugging Face (can be Private).
+2. Upload the contents of your `model_checkpoint_...` folders to the repo.
 
-## Option A: Railway.app (Recommended)
-1.  **Connect Repo**: Go to [Railway.app](https://railway.app/) and create a new project from your GitHub repository.
-2.  **Add Variables**: In the "Variables" tab, add the following:
-    - `SUPABASE_URL`: (Your URL)
-    - `SUPABASE_SERVICE_KEY`: (Your Service Role key)
-    - `ADMIN_SECRET`: (Any password you want)
-    - `AUTONOMOUS_LOOP`: `true`
-3.  **Resource Settings**: Ensure you give the service at least **2GB of RAM**. Since you are running two models concurrently, anything less might cause the server to crash (OOM).
-4.  **Deploy**: Railway will detect the `Dockerfile` and start building. Once finished, your bots will start their autonomous loop!
+## Step 2: Create a Hugging Face Space
+1. Go to [huggingface.co/new-space](https://huggingface.co/new-space).
+2. Name it (e.g., `brain-vat-inference`).
+3. Select **Docker** as the SDK.
+4. Git clone the Space repo or use the web interface to upload:
+   - `Dockerfile`
+   - `requirements.txt`
+   - `convo_bots/` directory (the whole folder)
 
-## Option B: Hugging Face Spaces
-1.  **Create Space**: Create a new "Docker" Space on [Hugging Face](https://huggingface.co/new-space).
-2.  **Settings**: In the Space settings, add your Secrets (`SUPABASE_URL`, etc.).
-3.  **Upload**: Push your code to the Space's Git repo.
-4.  **Stay Awake**: If using the Free tier, use a service like [UptimeRobot](https://uptimerobot.com/) to ping your Space's public URL every 15-30 minutes to keep it from sleeping.
+## Step 3: Configure Secrets
+In your Space's **Settings** tab, scroll to **Variables and secrets** and add:
+- `SUPABASE_URL`: (Your URL)
+- `SUPABASE_SERVICE_KEY`: (Your Service Role Key)
+- `ADMIN_SECRET`: (Your access password)
+- `MODEL_A_PATH`: `your-username/your-mauk-repo`
+- `MODEL_B_PATH`: `your-username/your-abaci-repo`
+- `HF_TOKEN`: (Your HF token for private repo access)
+- `AUTONOMOUS_LOOP`: `true`
 
-## Important Note on Memory
-The server is configured to recover its "active memory concepts" from Supabase on startup. Even if the cloud server restarts, Mauk and Abaci will remember what they were obsessing over.
+## Step 4: Keep it Awake (UptimeRobot)
+Free Spaces sleep after 48 hours. To keep Mauk and Abaci talking 24/7:
+1. Go to [UptimeRobot](https://uptimerobot.com/) and create a free account.
+2. Add a "HTTPS" monitor pointing to your Space's **Direct URL** (found under the '...' menu -> 'Embed this Space').
+3. Set the interval to every 15-20 minutes.
 
 ---
-**Tip**: To disable the autonomous loop (e.g., if you only want to use the API), set `AUTONOMOUS_LOOP=false`.
+**Tip**: If you see a "5.5GB exceeded" error on other platforms, it's because they are downloading GPU drivers. This Dockerfile uses `torch-cpu` to keep the image slim and fast.

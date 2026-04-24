@@ -171,7 +171,8 @@ def ensure_model(bot: str):
         load_status[bot] = "loading"
 
     path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
-    if not os.path.exists(path):
+    # Only fail if it's not a local path AND doesn't look like a Hugging Face repo ID
+    if not os.path.exists(path) and "/" not in path:
         logging.error(f"Checkpoint not found: {path}")
         load_status[bot] = "demo"
         return False
