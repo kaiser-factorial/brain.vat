@@ -529,17 +529,19 @@ def admin_settings():
         if bot not in ("a", "b"):
             return jsonify({"error": "INVALID_BOT_ID"}), 400
             
-        # Clean settings to match schema
         settings = {
             "temperature": safe_float(data.get("temperature"), 0.95),
             "top_p": safe_float(data.get("top_p"), 0.95),
+            "top_k": safe_int(data.get("top_k"), 0),
             "max_new_tokens": safe_int(data.get("max_new_tokens"), 60),
             "repetition_penalty": safe_float(data.get("repetition_penalty"), 1.3),
             "memory_weight": safe_float(data.get("memory_weight"), 0.70),
+            "base_sleep": safe_int(data.get("base_sleep") or data.get("cycle_sleep"), 120),
+            "base_jitter": safe_int(data.get("base_jitter") or data.get("cycle_jitter"), 30),
             "is_active": True
         }
         
-        logging.info(f"[ADMIN] Syncing params for {bot}. Temp: {settings['temperature']}")
+        logging.info(f"[ADMIN] Syncing params for {bot}. Temp: {settings['temperature']}, Sleep: {settings['base_sleep']}")
         
         success = update_bot_settings(sb_client, bot, settings)
         if success:
