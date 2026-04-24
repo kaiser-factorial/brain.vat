@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 interface SystemStatus {
   isOnline: boolean
   isLoopActive: boolean
+  isInitializing: boolean
   loopDetails: { a: boolean, b: boolean, unified: boolean } | null
   loopPauses: { a: boolean, b: boolean } | null
   loadStatus: { a: string, b: string } | null
@@ -25,6 +26,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SystemStatus>({
     isOnline: false,
     isLoopActive: false,
+    isInitializing: true,
     loopDetails: null,
     loopPauses: null,
     loadStatus: null,
@@ -41,6 +43,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
       setStatus({
         isOnline: true,
         isLoopActive: data.loop_active ?? false,
+        isInitializing: false,
         loopDetails: data.loop_details ?? null,
         loopPauses: data.loop_pauses ?? null,
         loadStatus: data.load_status ?? null,
@@ -50,6 +53,7 @@ export function SystemStatusProvider({ children }: { children: ReactNode }) {
       setStatus({
         isOnline: false,
         isLoopActive: false,
+        isInitializing: false,
         loopDetails: null,
         loopPauses: null,
         loadStatus: null,

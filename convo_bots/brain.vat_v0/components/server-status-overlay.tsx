@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { useSystemStatus } from '@/lib/system-status-context'
 
 export function ServerStatusOverlay() {
-  const { isOnline, isLoopActive } = useSystemStatus()
+  const { isOnline, isLoopActive, isInitializing } = useSystemStatus()
   const [dismissed, setDismissed] = useState(false)
 
   // Reset dismissal when system comes back online
@@ -14,7 +14,7 @@ export function ServerStatusOverlay() {
     }
   }, [isOnline, isLoopActive])
 
-  if (dismissed || (isOnline && isLoopActive)) return null
+  if (isInitializing || dismissed || (isOnline && isLoopActive)) return null
 
   const reason = !isOnline ? 'server' : 'loop'
 
