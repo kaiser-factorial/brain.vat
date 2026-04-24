@@ -38,13 +38,13 @@ export default function AuditDashboard() {
   const fetchLogs = useCallback(async (forcedSecret?: string, forcedBaseUrl?: string) => {
     setIsLoading(true);
     try {
-      const baseUrl = forcedBaseUrl || manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const baseUrl = forcedBaseUrl || manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'https://brick-factorial-brain-vat-inference.hf.space'
       const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       const res = await fetch(`${baseUrl}/api/admin/audit`, {
         headers: { 'X-Admin-Secret': adminSecret },
         cache: 'no-store'
       })
-      
+
       if (!res.ok) {
         if (res.status === 401) {
           throw new Error('SECURE_ACCESS_REQUIRED')
@@ -53,10 +53,10 @@ export default function AuditDashboard() {
         if (res.status === 500) throw new Error('SERVER_INTERNAL_ERROR_500')
         throw new Error(`COMM_FAILURE_STATUS_${res.status}`)
       }
-      
+
       const data = await res.json()
       setLogs(Array.isArray(data) ? data.reverse() : [])
-      setErrorStatus(null) 
+      setErrorStatus(null)
 
       // If we got here, the secret and URL we used are valid
       if (adminSecret) {
@@ -145,7 +145,7 @@ export default function AuditDashboard() {
       {/* Header */}
       <div className="mb-8 border-b border-[#00441b] pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 
+          <h1
             className="text-2xl font-bold tracking-tighter"
             style={{ textShadow: '0 0 10px #00ff41' }}
           >
@@ -156,7 +156,7 @@ export default function AuditDashboard() {
             <span className="animate-pulse text-[#00ff41]">{glitchText}</span>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => router.push('/')}
           className="text-[10px] uppercase tracking-widest border border-[#00ff41] px-4 py-2 hover:bg-[#00ff41] hover:text-black transition-all duration-300 font-bold"
         >
@@ -180,11 +180,11 @@ export default function AuditDashboard() {
             <div className="space-y-4">
               <div className="relative group">
                 <label className="text-[9px] uppercase text-[#00441b] mb-1 block tracking-widest">Inference Core URL</label>
-                <input 
+                <input
                   type="text"
                   id="audit-url-input"
-                  defaultValue={manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}
-                  placeholder="http://localhost:5001"
+                  defaultValue={manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'https://brick-factorial-brain-vat-inference.hf.space'}
+                  placeholder="https://brick-factorial-brain-vat-inference.hf.space"
                   disabled={isLoading}
                   className="w-full bg-black/40 border border-[#002200] p-3 text-[10px] tracking-wider focus:border-[#00ff41] focus:outline-none transition-all disabled:opacity-50 text-terminal-green"
                 />
@@ -192,7 +192,7 @@ export default function AuditDashboard() {
 
               <div className="relative group">
                 <label className="text-[9px] uppercase text-[#00441b] mb-1 block tracking-widest">Admin Secret</label>
-                <input 
+                <input
                   type="password"
                   id="audit-secret-input"
                   placeholder="ENTER_PASSPHRASE..."
@@ -250,8 +250,8 @@ export default function AuditDashboard() {
           </div>
         ) : (
           logs.map((log, idx) => (
-            <div 
-              key={`${log.timestamp}-${idx}`} 
+            <div
+              key={`${log.timestamp}-${idx}`}
               className="border border-[#00441b] bg-[#000800] overflow-hidden rounded-sm group hover:border-[#00ff41]/50 transition-all duration-500 shadow-2xl"
             >
               {/* Log Meta */}
@@ -274,7 +274,7 @@ export default function AuditDashboard() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="p-5 space-y-6">
                 {/* Prompt Block */}
                 <div>
@@ -334,8 +334,8 @@ export default function AuditDashboard() {
                         </summary>
                         <div className="mt-4 flex flex-wrap gap-2 animate-fadeIn">
                           {log.suppressor_log.map((word, wIdx) => (
-                            <span 
-                              key={wIdx} 
+                            <span
+                              key={wIdx}
                               className="px-2 py-1 bg-[#002200]/30 border border-[#00441b]/30 text-[9px] text-[#008f11] rounded-sm hover:border-[#00ff41]/50 hover:text-[#00ff41] transition-all cursor-default"
                             >
                               {word}
@@ -347,18 +347,18 @@ export default function AuditDashboard() {
                   )}
 
                   <div className="flex flex-wrap gap-6 text-[9px] text-[#006600] font-bold tracking-widest pt-2">
-                     <div className="flex items-center gap-2">
-                       <span className="text-[#008f11]">FIDELITY:</span>
-                       <span className="text-[#00ff41]">OPTIMAL</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <span className="text-[#008f11]">ENTROPY_CHECK:</span>
-                       <span className="text-[#00ff41]">PASSED</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <span className="text-[#008f11]">VERSION:</span>
-                       <span className="text-[#00ff41]">{log.settings?.model_version || 'v1.0'}</span>
-                     </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#008f11]">FIDELITY:</span>
+                      <span className="text-[#00ff41]">OPTIMAL</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#008f11]">ENTROPY_CHECK:</span>
+                      <span className="text-[#00ff41]">PASSED</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#008f11]">VERSION:</span>
+                      <span className="text-[#00ff41]">{log.settings?.model_version || 'v1.0'}</span>
+                    </div>
                   </div>
                 </div>
               </div>

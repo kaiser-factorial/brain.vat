@@ -37,21 +37,21 @@ export default function AdminControlPanel() {
   const fetchSettings = useCallback(async (forcedSecret?: string, forcedBaseUrl?: string) => {
     setIsLoading(true)
     try {
-      const baseUrl = forcedBaseUrl || manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const baseUrl = forcedBaseUrl || manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'https://brick-factorial-brain-vat-inference.hf.space'
       const adminSecret = forcedSecret || manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
       // Fetch Bot Settings
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
         headers: { 'X-Admin-Secret': adminSecret },
         cache: 'no-store'
       })
-      
+
       if (!res.ok) {
         if (res.status === 401) {
           throw new Error('SECURE_ACCESS_REQUIRED');
         }
         throw new Error('FETCH_FAILED_BY_SERVER');
       }
-      
+
       const data = await res.json()
 
       // Define default settings for any missing bots
@@ -70,7 +70,7 @@ export default function AdminControlPanel() {
 
       // Ensure settings have defaults for new fields if DB columns are missing
       const dbEntries = (Array.isArray(data) ? data : [])
-      
+
       // Ensure BOTH 'a' and 'b' bots exist in the final state
       const finalSettings = ['a', 'b'].map(botKey => {
         const existing = dbEntries.find(s => s.bot === botKey)
@@ -92,7 +92,7 @@ export default function AdminControlPanel() {
       })
 
       setSettings(finalSettings)
-      
+
       // If we got here, the secret and URL we used are valid
       if (adminSecret) {
         setManualSecret(adminSecret)
@@ -106,7 +106,7 @@ export default function AdminControlPanel() {
           localStorage.setItem('brain_vat_manual_url', baseUrl)
         }
       }
-      
+
       setMessage(null)
     } catch (error: any) {
       if (error.message !== 'SECURE_ACCESS_REQUIRED') {
@@ -161,9 +161,9 @@ export default function AdminControlPanel() {
     setMessage(null)
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://brick-factorial-brain-vat-inference.hf.space'
       const adminSecret = manualSecret || process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
-      
+
       // Clean up the data before sending (deduplicate, remove empty)
       // NOTE: We no longer .trim() so that the user can manually include spaces if needed,
       // although the server now handles space-prefixes automatically.
@@ -177,7 +177,7 @@ export default function AdminControlPanel() {
 
       const res = await fetch(`${baseUrl}/api/admin/settings`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'X-Admin-Secret': adminSecret
         },
@@ -185,11 +185,11 @@ export default function AdminControlPanel() {
       })
 
       if (!res.ok) throw new Error('SAVE_FAILED')
-      
+
       // Finalize sync success
       setShowSuccess(`BOT_${botKey.toUpperCase()}_PARAMETERS_PUSHED`)
       setTimeout(() => setShowSuccess(null), 3000)
-      
+
       // Silent refresh to ensure local state matches DB
       fetchSettings()
     } catch (error: any) {
@@ -201,7 +201,7 @@ export default function AdminControlPanel() {
   }
 
   const updateBotField = (botKey: string, field: keyof BotSettings, value: any) => {
-    setSettings(prev => prev.map(s => 
+    setSettings(prev => prev.map(s =>
       s.bot === botKey ? { ...s, [field]: value } : s
     ))
   }
@@ -235,13 +235,13 @@ export default function AdminControlPanel() {
           </div>
         </div>
         <div className="flex gap-4">
-          <button 
+          <button
             onClick={() => router.push('/admin/audit')}
             className="text-[10px] uppercase tracking-widest border border-[#00441b] px-4 py-2 hover:border-[#00ff41] hover:text-[#00ff41] transition-all duration-300"
           >
             [audit_logs]
           </button>
-          <button 
+          <button
             onClick={() => router.push('/')}
             className="text-[10px] uppercase tracking-widest border border-red-900 text-red-900 px-4 py-2 hover:bg-red-900 hover:text-black transition-all duration-300 font-bold"
           >
@@ -265,11 +265,11 @@ export default function AdminControlPanel() {
             <div className="space-y-4">
               <div className="relative group">
                 <label className="text-[9px] uppercase text-[#00441b] mb-1 block tracking-widest">Inference Core URL</label>
-                <input 
+                <input
                   type="text"
                   id="admin-url-input"
-                  defaultValue={manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}
-                  placeholder="http://localhost:5001"
+                  defaultValue={manualBaseUrl || process.env.NEXT_PUBLIC_API_URL || 'https://brick-factorial-brain-vat-inference.hf.space'}
+                  placeholder="https://brick-factorial-brain-vat-inference.hf.space"
                   disabled={isLoading}
                   className="w-full bg-black/40 border border-[#002200] p-3 text-[10px] tracking-wider focus:border-[#00ff41] focus:outline-none transition-all disabled:opacity-50 text-terminal-green"
                 />
@@ -277,7 +277,7 @@ export default function AdminControlPanel() {
 
               <div className="relative group">
                 <label className="text-[9px] uppercase text-[#00441b] mb-1 block tracking-widest">Admin Secret</label>
-                <input 
+                <input
                   type="password"
                   id="admin-secret-input"
                   placeholder="ENTER_PASSPHRASE..."
@@ -330,13 +330,13 @@ export default function AdminControlPanel() {
                 <div className="text-xs font-mono opacity-80 uppercase tracking-widest">Core_Link_Severed // Database_Rejection</div>
               </div>
             </div>
-            
+
             <div className="bg-red-500/10 border border-red-500/30 p-6 mb-10 font-mono text-sm text-red-400">
               <div className="mb-2 opacity-60 text-[10px] uppercase">Traceback_Log:</div>
               <p className="font-bold tracking-tight">{criticalError}</p>
             </div>
 
-            <button 
+            <button
               onClick={() => setCriticalError(null)}
               className="w-full bg-red-600 text-black font-black py-5 text-lg uppercase tracking-[0.3em] hover:bg-white transition-all active:scale-95 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
             >
@@ -371,237 +371,237 @@ export default function AdminControlPanel() {
       {!message && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {settings.length === 0 && (
-          <div className="col-span-full border border-dashed border-[#00441b] py-20 text-center">
-            <p className="text-[#008f11] text-xs uppercase tracking-widest mb-4">No_Bot_Configuration_Detected</p>
-            <p className="text-[10px] text-[#00441b] max-w-md mx-auto px-4 uppercase leading-relaxed font-mono mb-8">
-              Ensure the <span className="text-terminal-green">bot_settings</span> table is created in Supabase. Check the walkthrough for the SQL script.
-            </p>
-            <button 
-              disabled={isLoading}
-              onClick={() => {
-                setIsLoading(true);
-                fetchSettings();
-              }}
-              className="text-[10px] text-terminal-green border border-terminal-green px-4 py-2 hover:bg-terminal-green hover:text-black transition-all disabled:opacity-50 disabled:cursor-wait"
-            >
-              [ {isLoading ? 'ESTABLISHING_TLS_HANDSHAKE...' : 'RETRY_HANDSHAKE'} ]
-            </button>
-          </div>
-        )}
-        {settings.map((botSettings) => (
-          <div key={botSettings.bot} className="border border-[#00441b] bg-[#000800] overflow-hidden rounded-sm hover:border-[#00ff41]/40 transition-all duration-500 shadow-2xl relative group">
-            {/* Bot Header */}
-            <div className="bg-[#001500] px-6 py-3 border-b border-[#00441b] flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-terminal-green animate-pulse shadow-[0_0_8px_#00ff41]" />
-                <span className="text-sm font-bold tracking-[0.3em]">
-                  {botSettings.bot === 'a' ? 'MAUK' : 'ABACI'}
-                </span>
-              </div>
-              <div className="flex items-center gap-4 text-right">
+            <div className="col-span-full border border-dashed border-[#00441b] py-20 text-center">
+              <p className="text-[#008f11] text-xs uppercase tracking-widest mb-4">No_Bot_Configuration_Detected</p>
+              <p className="text-[10px] text-[#00441b] max-w-md mx-auto px-4 uppercase leading-relaxed font-mono mb-8">
+                Ensure the <span className="text-terminal-green">bot_settings</span> table is created in Supabase. Check the walkthrough for the SQL script.
+              </p>
+              <button
+                disabled={isLoading}
+                onClick={() => {
+                  setIsLoading(true);
+                  fetchSettings();
+                }}
+                className="text-[10px] text-terminal-green border border-terminal-green px-4 py-2 hover:bg-terminal-green hover:text-black transition-all disabled:opacity-50 disabled:cursor-wait"
+              >
+                [ {isLoading ? 'ESTABLISHING_TLS_HANDSHAKE...' : 'RETRY_HANDSHAKE'} ]
+              </button>
+            </div>
+          )}
+          {settings.map((botSettings) => (
+            <div key={botSettings.bot} className="border border-[#00441b] bg-[#000800] overflow-hidden rounded-sm hover:border-[#00ff41]/40 transition-all duration-500 shadow-2xl relative group">
+              {/* Bot Header */}
+              <div className="bg-[#001500] px-6 py-3 border-b border-[#00441b] flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-terminal-green animate-pulse shadow-[0_0_8px_#00ff41]" />
+                  <span className="text-sm font-bold tracking-[0.3em]">
+                    {botSettings.bot === 'a' ? 'MAUK' : 'ABACI'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-right">
 
-                <div className="flex flex-col items-end">
-                  {/* Loop Status Pill */}
-                  <div className={`text-[8px] font-black px-2 py-0.5 mb-1 tracking-tighter rounded-full ${loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'bg-[#00ff41] text-black shadow-[0_0_10px_#00ff41]' : 'border border-[#00441b] text-[#00441b]'}`}>
-                    {loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'LOOP_ACTIVE' : 'LOOP_OFFLINE'}
-                  </div>
-                  <div className="text-[9px] text-[#008f11] font-bold uppercase tracking-widest font-mono">
-                    Node_{botSettings.bot.toUpperCase()}
-                  </div>
-                  {botSettings.updated_at && (
-                    <div className="text-[7px] text-[#00441b] uppercase tracking-widest mt-0.5">
-                      Last_Sync: {new Date(botSettings.updated_at).toLocaleString([], { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex flex-col items-end">
+                    {/* Loop Status Pill */}
+                    <div className={`text-[8px] font-black px-2 py-0.5 mb-1 tracking-tighter rounded-full ${loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'bg-[#00ff41] text-black shadow-[0_0_10px_#00ff41]' : 'border border-[#00441b] text-[#00441b]'}`}>
+                      {loopDetails?.[botSettings.bot as 'a' | 'b'] ? 'LOOP_ACTIVE' : 'LOOP_OFFLINE'}
                     </div>
-                  )}
+                    <div className="text-[9px] text-[#008f11] font-bold uppercase tracking-widest font-mono">
+                      Node_{botSettings.bot.toUpperCase()}
+                    </div>
+                    {botSettings.updated_at && (
+                      <div className="text-[7px] text-[#00441b] uppercase tracking-widest mt-0.5">
+                        Last_Sync: {new Date(botSettings.updated_at).toLocaleString([], { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-8 space-y-8">
-              {/* Model Version & Timing Group */}
-              <div className="grid grid-cols-1 gap-6 pb-6 border-b border-[#002200]">
+              <div className="p-8 space-y-8">
+                {/* Model Version & Timing Group */}
+                <div className="grid grid-cols-1 gap-6 pb-6 border-b border-[#002200]">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Model Version</label>
+                    </div>
+                    <input
+                      type="text"
+                      value={botSettings.model_version || 'v1'}
+                      onChange={(e) => updateBotField(botSettings.bot, 'model_version', e.target.value)}
+                      placeholder="e.g. v1, v2-experimental"
+                      className="w-full bg-black border border-[#002200] px-4 py-2 text-xs text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-end">
+                        <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Frequency (s)</label>
+                        <span className="text-xs text-cyan-400 tabular-nums">{botSettings.base_sleep}s</span>
+                      </div>
+                      <input
+                        type="range" min="10" max="600" step="10"
+                        value={botSettings.base_sleep || 120}
+                        onChange={(e) => updateBotField(botSettings.bot, 'base_sleep', parseInt(e.target.value))}
+                        className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-end">
+                        <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Jitter (s)</label>
+                        <span className="text-xs text-cyan-400 tabular-nums">±{botSettings.base_jitter}s</span>
+                      </div>
+                      <input
+                        type="range" min="0" max="120" step="5"
+                        value={botSettings.base_jitter || 30}
+                        onChange={(e) => updateBotField(botSettings.bot, 'base_jitter', parseInt(e.target.value))}
+                        className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Temperature */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
-                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Model Version</label>
+                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Temperature</label>
+                    <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.temperature.toFixed(2)}</span>
                   </div>
-                  <input 
-                    type="text"
-                    value={botSettings.model_version || 'v1'}
-                    onChange={(e) => updateBotField(botSettings.bot, 'model_version', e.target.value)}
-                    placeholder="e.g. v1, v2-experimental"
-                    className="w-full bg-black border border-[#002200] px-4 py-2 text-xs text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors font-mono"
+                  <input
+                    type="range" min="0.1" max="2.0" step="0.05"
+                    value={botSettings.temperature}
+                    onChange={(e) => updateBotField(botSettings.bot, 'temperature', parseFloat(e.target.value))}
+                    className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
+                  />
+                  <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
+                    <span>Stability</span>
+                    <span>Creativity</span>
+                  </div>
+                </div>
+
+                {/* Top-P */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Top-P (Nucleus)</label>
+                    <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.top_p.toFixed(2)}</span>
+                  </div>
+                  <input
+                    type="range" min="0.1" max="1.0" step="0.01"
+                    value={botSettings.top_p}
+                    onChange={(e) => updateBotField(botSettings.bot, 'top_p', parseFloat(e.target.value))}
+                    className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
+                  />
+                  <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
+                    <span>Strict</span>
+                    <span>Diverse</span>
+                  </div>
+                </div>
+
+                {/* Repetition Penalty */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Repetition Penalty</label>
+                    <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.repetition_penalty?.toFixed(2) || "1.30"}</span>
+                  </div>
+                  <input
+                    type="range" min="1.0" max="2.5" step="0.05"
+                    value={botSettings.repetition_penalty || 1.3}
+                    onChange={(e) => updateBotField(botSettings.bot, 'repetition_penalty', parseFloat(e.target.value))}
+                    className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
+                  />
+                  <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
+                    <span>Fluid</span>
+                    <span>Diverse</span>
+                  </div>
+                </div>
+
+                {/* Max New Tokens */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Max Response Length</label>
+                    <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.max_new_tokens || 55}</span>
+                  </div>
+                  <input
+                    type="range" min="10" max="200" step="1"
+                    value={botSettings.max_new_tokens || 55}
+                    onChange={(e) => updateBotField(botSettings.bot, 'max_new_tokens', parseInt(e.target.value))}
+                    className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
+                  />
+                  <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
+                    <span>Concise</span>
+                    <span>Verbose</span>
+                  </div>
+                </div>
+
+                {/* Memory Recall Power */}
+                <div className="space-y-4 pt-4 border-t border-[#002200]">
+                  <div className="flex justify-between items-end">
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase text-[#00ff41] font-bold tracking-widest">Memory Recall Power</label>
+                      <p className="text-[8px] text-[#00441b] uppercase tracking-tight">Probability of long-term memory retrieval</p>
+                    </div>
+                    <span className="text-xs text-[#00ff41] font-bold tabular-nums">{(botSettings.memory_weight * 100).toFixed(0)}%</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="1" step="0.05"
+                    value={botSettings.memory_weight || 0.7}
+                    onChange={(e) => updateBotField(botSettings.bot, 'memory_weight', parseFloat(e.target.value))}
+                    className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all font-mono"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Frequency (s)</label>
-                      <span className="text-xs text-cyan-400 tabular-nums">{botSettings.base_sleep}s</span>
-                    </div>
-                    <input 
-                      type="range" min="10" max="600" step="10"
-                      value={botSettings.base_sleep || 120}
-                      onChange={(e) => updateBotField(botSettings.bot, 'base_sleep', parseInt(e.target.value))}
-                      className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                    />
+                {/* Top-K */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Top-K (Entropy Floor)</label>
+                    <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.top_k === 0 ? 'FULL_CHAOS' : botSettings.top_k}</span>
                   </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <label className="text-[10px] uppercase text-cyan-700 font-bold tracking-widest">Jitter (s)</label>
-                      <span className="text-xs text-cyan-400 tabular-nums">±{botSettings.base_jitter}s</span>
-                    </div>
-                    <input 
-                      type="range" min="0" max="120" step="5"
-                      value={botSettings.base_jitter || 30}
-                      onChange={(e) => updateBotField(botSettings.bot, 'base_jitter', parseInt(e.target.value))}
-                      className="w-full h-1 bg-[#001522] rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                    />
+                  <input
+                    type="range" min="0" max="100" step="1"
+                    value={botSettings.top_k || 0}
+                    onChange={(e) => updateBotField(botSettings.bot, 'top_k', parseInt(e.target.value))}
+                    className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
+                  />
+                  <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
+                    <span>Unleashed</span>
+                    <span>Focused</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Temperature */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Temperature</label>
-                  <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.temperature.toFixed(2)}</span>
+                {/* Banned Words */}
+                <div className="space-y-4">
+                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest block">Banned Words (Comma-Separated)</label>
+                  <textarea
+                    value={botSettings.banned_words.join(', ')}
+                    onChange={(e) => {
+                      // Update state with the raw tokens, allowing spaces/commas while typing
+                      const raw = e.target.value;
+                      const words = raw.split(',').map(w => w.startsWith(' ') ? w : w); // Keep raw structure
+                      updateBotField(botSettings.bot, 'banned_words', raw.split(','));
+                    }}
+                    rows={4}
+                    className="w-full bg-black border border-[#002200] p-3 text-xs text-[#00cc33] focus:border-[#00ff41] focus:outline-none transition-colors scrollbar-thin scrollbar-thumb-[#00441b] scrollbar-track-black"
+                    placeholder="word1, phrase 1, ..."
+                  />
+                  <p className="text-[8px] text-[#00441b] uppercase tracking-widest leading-relaxed">
+                    These tokens will be suppressed during inference to prevent overfitting or undesirable hallucinations.
+                  </p>
                 </div>
-                <input 
-                  type="range" min="0.1" max="2.0" step="0.05"
-                  value={botSettings.temperature}
-                  onChange={(e) => updateBotField(botSettings.bot, 'temperature', parseFloat(e.target.value))}
-                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
-                  <span>Stability</span>
-                  <span>Creativity</span>
-                </div>
-              </div>
 
-              {/* Top-P */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Top-P (Nucleus)</label>
-                  <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.top_p.toFixed(2)}</span>
-                </div>
-                <input 
-                  type="range" min="0.1" max="1.0" step="0.01"
-                  value={botSettings.top_p}
-                  onChange={(e) => updateBotField(botSettings.bot, 'top_p', parseFloat(e.target.value))}
-                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
-                  <span>Strict</span>
-                  <span>Diverse</span>
-                </div>
+                {/* Save Button */}
+                <button
+                  onClick={() => handleUpdate(botSettings.bot)}
+                  disabled={isSaving === botSettings.bot}
+                  className="w-full py-4 border border-[#00ff41] text-[#00ff41] text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-[#00ff41] hover:text-black transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed group/btn overflow-hidden relative"
+                >
+                  <div className={`absolute inset-0 bg-[#00ff41] transition-transform duration-500 -translate-x-full group-hover/btn:translate-x-0 ${isSaving === botSettings.bot ? 'translate-x-0' : ''}`} />
+                  <span className="relative z-10">
+                    {isSaving === botSettings.bot ? 'PUSHING_HYPERPARAMETERS...' : 'APPLY_CHANGES'}
+                  </span>
+                </button>
               </div>
-
-              {/* Repetition Penalty */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Repetition Penalty</label>
-                  <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.repetition_penalty?.toFixed(2) || "1.30"}</span>
-                </div>
-                <input 
-                  type="range" min="1.0" max="2.5" step="0.05"
-                  value={botSettings.repetition_penalty || 1.3}
-                  onChange={(e) => updateBotField(botSettings.bot, 'repetition_penalty', parseFloat(e.target.value))}
-                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
-                  <span>Fluid</span>
-                  <span>Diverse</span>
-                </div>
-              </div>
-
-              {/* Max New Tokens */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Max Response Length</label>
-                  <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.max_new_tokens || 55}</span>
-                </div>
-                <input 
-                  type="range" min="10" max="200" step="1"
-                  value={botSettings.max_new_tokens || 55}
-                  onChange={(e) => updateBotField(botSettings.bot, 'max_new_tokens', parseInt(e.target.value))}
-                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
-                  <span>Concise</span>
-                  <span>Verbose</span>
-                </div>
-              </div>
-
-              {/* Memory Recall Power */}
-              <div className="space-y-4 pt-4 border-t border-[#002200]">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase text-[#00ff41] font-bold tracking-widest">Memory Recall Power</label>
-                    <p className="text-[8px] text-[#00441b] uppercase tracking-tight">Probability of long-term memory retrieval</p>
-                  </div>
-                  <span className="text-xs text-[#00ff41] font-bold tabular-nums">{(botSettings.memory_weight * 100).toFixed(0)}%</span>
-                </div>
-                <input 
-                  type="range" min="0" max="1" step="0.05"
-                  value={botSettings.memory_weight || 0.7}
-                  onChange={(e) => updateBotField(botSettings.bot, 'memory_weight', parseFloat(e.target.value))}
-                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all font-mono"
-                />
-              </div>
-
-              {/* Top-K */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest">Top-K (Entropy Floor)</label>
-                  <span className="text-xs text-[#00ff41] tabular-nums">{botSettings.top_k === 0 ? 'FULL_CHAOS' : botSettings.top_k}</span>
-                </div>
-                <input 
-                  type="range" min="0" max="100" step="1"
-                  value={botSettings.top_k || 0}
-                  onChange={(e) => updateBotField(botSettings.bot, 'top_k', parseInt(e.target.value))}
-                  className="w-full h-1 bg-[#002200] rounded-lg appearance-none cursor-pointer accent-[#00ff41] hover:accent-[#00ff41]/80 transition-all"
-                />
-                <div className="flex justify-between text-[8px] text-[#00441b] font-bold uppercase tracking-tighter">
-                  <span>Unleashed</span>
-                  <span>Focused</span>
-                </div>
-              </div>
-
-              {/* Banned Words */}
-              <div className="space-y-4">
-                <label className="text-[10px] uppercase text-[#008f11] font-bold tracking-widest block">Banned Words (Comma-Separated)</label>
-                <textarea 
-                  value={botSettings.banned_words.join(', ')}
-                  onChange={(e) => {
-                    // Update state with the raw tokens, allowing spaces/commas while typing
-                    const raw = e.target.value;
-                    const words = raw.split(',').map(w => w.startsWith(' ') ? w : w); // Keep raw structure
-                    updateBotField(botSettings.bot, 'banned_words', raw.split(','));
-                  }}
-                  rows={4}
-                  className="w-full bg-black border border-[#002200] p-3 text-xs text-[#00cc33] focus:border-[#00ff41] focus:outline-none transition-colors scrollbar-thin scrollbar-thumb-[#00441b] scrollbar-track-black"
-                  placeholder="word1, phrase 1, ..."
-                />
-                <p className="text-[8px] text-[#00441b] uppercase tracking-widest leading-relaxed">
-                  These tokens will be suppressed during inference to prevent overfitting or undesirable hallucinations.
-                </p>
-              </div>
-
-              {/* Save Button */}
-              <button 
-                onClick={() => handleUpdate(botSettings.bot)}
-                disabled={isSaving === botSettings.bot}
-                className="w-full py-4 border border-[#00ff41] text-[#00ff41] text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-[#00ff41] hover:text-black transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed group/btn overflow-hidden relative"
-              >
-                <div className={`absolute inset-0 bg-[#00ff41] transition-transform duration-500 -translate-x-full group-hover/btn:translate-x-0 ${isSaving === botSettings.bot ? 'translate-x-0' : ''}`} />
-                <span className="relative z-10">
-                  {isSaving === botSettings.bot ? 'PUSHING_HYPERPARAMETERS...' : 'APPLY_CHANGES'}
-                </span>
-              </button>
             </div>
-          </div>
-        ))}
+          ))}
         </div>
       )}
 
