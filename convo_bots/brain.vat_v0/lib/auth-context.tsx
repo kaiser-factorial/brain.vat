@@ -23,27 +23,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', user.id)
-          .single()
-        
-        const finalName = profile?.display_name || null
-        setDisplayName(finalName)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', user.id)
+            .single()
+          
+          const finalName = profile?.display_name || null
+          setDisplayName(finalName)
 
-        // Metadata Sync: Force update if browser metadata is stuck on CORINA
-        if (finalName === 'brick.factorial' && user.user_metadata?.display_name !== 'brick.factorial') {
-          console.log('[Auth] Syncing metadata to brick.factorial...')
-          await supabase.auth.updateUser({
-            data: { display_name: 'brick.factorial' }
-          })
+          // Metadata Sync: Force update if browser metadata is stuck on CORINA
+          if (finalName === 'brick.factorial' && user.user_metadata?.display_name !== 'brick.factorial') {
+            console.log('[Auth] Syncing metadata to brick.factorial...')
+            await supabase.auth.updateUser({
+              data: { display_name: 'brick.factorial' }
+            })
+          }
         }
+      } catch (err) {
+        console.error('[Auth] Initial user fetch failed:', err)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     getUser()
