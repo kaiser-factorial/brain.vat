@@ -143,9 +143,14 @@ class MemoryGraph:
 
         if self.save_path.exists():
             self._load()
-            log.info(f"[{bot_name}] Memory loaded: {len(self._concepts)} concepts")
+            log.info(f"[{bot_name}] Memory loaded from disk: {len(self._concepts)} concepts")
         else:
-            log.info(f"[{bot_name}] New memory graph")
+            log.info(f"[{bot_name}] Local memory cache missing. Attempting Supabase recovery...")
+            self._load_from_supabase()
+            if self._concepts:
+                log.info(f"[{bot_name}] Memory recovered from Supabase: {len(self._concepts)} concepts")
+            else:
+                log.info(f"[{bot_name}] New memory graph (no recovery source)")
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
@@ -326,6 +331,19 @@ class MemoryGraph:
         data = json.loads(self.save_path.read_text())
         self._concepts = data.get("concepts", {})
         self._cooccur  = data.get("cooccur",  {})
+
+    def _load_from_supabase(self):
+        """Recover active concepts from Supabase if local state is lost."""
+        sb = _supabase()
+        if sb is None:
+            return
+        try:
+            res = sb.table("memory_concepts").select("concept, weight").eq("bot", self.bot_key).execute()
+            if res.data:
+                for row in res.data:
+                    self._concepts[row["concept"]] = row["weight"]
+        except Exception as e:
+            log.warning(f"[{self.bot_name}] Supabase recovery failed: {e}")
 
     def _sync_supabase(self):
         """Push decaying concepts to 'memory_concepts' for the active UI tier."""

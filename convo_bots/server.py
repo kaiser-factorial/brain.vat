@@ -14,10 +14,12 @@ import logging
 from pathlib import Path
 from datetime import datetime
 import math
+import random
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from dotenv import load_dotenv
 from collections import deque
+import requests
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -386,13 +388,14 @@ def generate_response(bot: str, history: list[dict]) -> str:
         }
         logging.info(f"Generating for {bot_name} with: {inference_params}")
 
-        with torch.no_grad():
-            output = models[bot].generate(
-                **inputs,
-                **{k: v for k, v in inference_params.items() if k != "bad_words_count"},
-                bad_words_ids=final_bad_words,
-                eos_token_id=tokenizers[bot].eos_token_id,
-            )
+        with model_lock:
+            with torch.no_grad():
+                output = models[bot].generate(
+                    **inputs,
+                    **{k: v for k, v in inference_params.items() if k != "bad_words_count"},
+                    bad_words_ids=final_bad_words,
+                    eos_token_id=tokenizers[bot].eos_token_id,
+                )
 
         raw = tokenizers[bot].decode(output[0][prompt_len:], skip_special_tokens=True)
         response_text = strip_dialogue_prefix(raw, bot_name)
@@ -601,21 +604,87 @@ def get_memory_archive():
         logging.error(f"Failed to fetch archive: {e}")
         return jsonify([])
 
-@app.route("/api/admin/system", methods=["GET", "POST"])
+@app.route("/api/admin/system", methods=["GET"])
 def admin_system_settings():
     """Manage global system loop settings (sleep, jitter)."""
-    if not SUPABASE_UTILS_AVAILABLE or not sb_client:
-        return jsonify({"error": "Supabase unavailable"}), 503
-    
-    # Check admin secret
-    check_admin_auth()
-
-    if request.method == "POST":
-        # Legacy: Still accept POST to avoid 404s, but don't do anything
-        return jsonify({"success": True, "message": "DEPRECATED_IN_FAVOR_OF_PER_BOT_TIMING"})
-
-    # GET: Return static defaults so the frontend doesn't crash
+    # Return static defaults so the frontend doesn't crash
     return jsonify({"cycle_sleep": 120, "cycle_jitter": 30})
+
+# ── Integrated Autonomous Loop ───────────────────────────────────────────────
+
+def autonomous_loop_worker():
+    """
+    Background worker that mimics the 'Organic Turn-Taking' of loop.py.
+    """
+    logging.info("[Loop] Background autonomous loop starting...")
+    time.sleep(10) # Give models time to prime
+    
+    while True:
+        try:
+            # 1. Decide who speaks next based on the last speaker in DB
+            next_bot = "a"
+            if SUPABASE_UTILS_AVAILABLE and sb_client:
+                try:
+                    history_res = sb_client.table("messages").select("speaker").order("created_at", desc=True).limit(1).execute()
+                    if history_res.data:
+                        last_speaker = history_res.data[0].get("speaker")
+                        # 35/65 bias to switch speakers (Organic Turn-Taking)
+                        choices = ["a", "b"]
+                        if last_speaker == BOT_A_NAME:
+                            next_bot = random.choices(choices, weights=[0.35, 0.65])[0]
+                        else:
+                            next_bot = random.choices(choices, weights=[0.65, 0.35])[0]
+                except Exception as e:
+                    logging.error(f"[Loop] Turn decision failed: {e}")
+            
+            bot_name = BOT_A_NAME if next_bot == "a" else BOT_B_NAME
+            
+            # 2. Check for manual pause
+            if LOOP_PAUSES.get(next_bot, False):
+                time.sleep(10)
+                continue
+                
+            # 3. Fetch latest settings for this bot
+            sleep_base = 120
+            jitter = 30
+            if SUPABASE_UTILS_AVAILABLE and sb_client:
+                all_set = fetch_bot_settings(sb_client)
+                current = next((s for s in all_set if s["bot"] == next_bot), {})
+                sleep_base = current.get("base_sleep", 120)
+                jitter = current.get("base_jitter", 30)
+
+            # 4. Generate & Persist (Same logic as generate() route)
+            logging.info(f"[Loop] Organic Turn: {bot_name} is thinking...")
+            
+            db_history = []
+            if SUPABASE_UTILS_AVAILABLE and sb_client:
+                try:
+                    res = sb_client.table("messages").select("speaker, text").order("created_at", desc=True).limit(6).execute()
+                    db_history = list(reversed(res.data)) if res.data else []
+                except: pass
+
+            text = generate_response(next_bot, db_history)
+            
+            if text and text not in ["(model warming up...)", "(silence)"]:
+                if SUPABASE_UTILS_AVAILABLE and sb_client:
+                    try:
+                        sb_client.table("messages").insert({
+                            "speaker": bot_name, "text": text, "role": "bot"
+                        }).execute()
+                    except Exception as e:
+                        logging.error(f"[Loop] Save failed: {e}")
+
+                if MEMORY_AVAILABLE and memory_graphs[next_bot]:
+                    memory_graphs[next_bot].curate_and_remember(text)
+
+            # 5. Organic Wait
+            wait_time = max(10, sleep_base + random.randint(-jitter, jitter))
+            logging.info(f"[Loop] {bot_name} turn complete. Sleeping {wait_time}s...")
+            time.sleep(wait_time)
+
+        except Exception as e:
+            logging.error(f"[Loop] Critical error: {e}")
+            time.sleep(60)
 
 if __name__ == "__main__":
     # Auto-prime models in background to break the wait-loop with loop.py
@@ -627,4 +696,11 @@ if __name__ == "__main__":
     
     threading.Thread(target=prime, daemon=True).start()
     
-    app.run(host="0.0.0.0", port=5001, debug=False)
+    # Optional: Start the autonomous loop if requested via ENV
+    if os.getenv("AUTONOMOUS_LOOP", "false").lower() == "true":
+        logging.info("Starting INTEGRATED autonomous loop...")
+        threading.Thread(target=autonomous_loop_worker, daemon=True).start()
+    
+    # Cloud providers often specify the port via PORT env var
+    port = int(os.getenv("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)
