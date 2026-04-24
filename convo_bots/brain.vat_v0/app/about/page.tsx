@@ -57,7 +57,7 @@ export default function AboutPage() {
                 <div key={item.component} className="bg-black/40 p-4 hover:bg-terminal-green/5 transition-colors group">
                   <div className="text-[10px] text-[#00FF00]/40 uppercase tracking-[0.2em] mb-1 font-bold">{item.component}</div>
                   <div className="text-xs font-bold text-[#00FF00] mb-2 tracking-wide group-hover:text-white transition-colors uppercase">{item.loc}</div>
-                  <div className="text-[10px] font-mono text-muted-foreground opacity-60 tracking-wider font-bold underline decoration-primary/20">{item.role}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground opacity-40 tracking-wider font-bold underline decoration-primary/20">{item.role}</div>
                 </div>
               ))}
             </div>
@@ -73,7 +73,7 @@ export default function AboutPage() {
               memory-augmented workspace.
             </p>
             <div className="pt-4 flex justify-between items-center border-t border-border/50">
-              <span className="text-[10px] text-muted-foreground font-mono">v0.1.0-alpha // MPS_OPTIMIZED</span>
+              <span className="text-[10px] text-muted-foreground font-mono">v0.1.2</span>
               <Link href="/">
                 <button className="text-primary hover:text-white transition-colors font-mono text-sm group">
                   [RETURN_TO_VAT] <span className="inline-block transform group-hover:translate-x-1 transition-transform">→</span>
