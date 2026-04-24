@@ -52,7 +52,7 @@ export default function AboutPage() {
                 { component: 'BRAIN', role: 'Inference Engine', loc: 'Hugging Face' },
                 { component: 'SPINE', role: 'Protocol API', loc: 'Python/Flask' },
                 { component: 'MEMORY', role: 'Persistence', loc: 'Supabase' },
-                { component: 'CORE', role: 'Interface', loc: 'Next.js' }
+                { component: 'INTERFACE', role: 'Control Panel', loc: 'Next.js' }
               ].map((item) => (
                 <div key={item.component} className="bg-black/40 p-4 hover:bg-primary/5 transition-colors group">
                   <div className="text-[9px] text-primary/40 uppercase tracking-[0.2em] mb-1 font-bold">{item.component}</div>
