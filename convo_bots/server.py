@@ -138,8 +138,14 @@ cache_lock = threading.Lock()
 LOOP_PAUSES = {"a": False, "b": False}
 
 def get_loop_status():
-    """Verify which loop processes are active via their specific PID files."""
+    """Verify which loop processes are active via their specific PID files or Cloud Thread."""
     results = {"a": False, "b": False, "unified": False}
+    
+    # If we are in the Cloud/Integrated mode, the loop is always "unified" if enabled
+    if os.getenv("AUTONOMOUS_LOOP", "false").lower() == "true":
+        results["unified"] = True
+        return results
+
     pid_files = {
         "a": BASE_DIR / "loop_a.pid",
         "b": BASE_DIR / "loop_b.pid",
@@ -519,12 +525,26 @@ def admin_settings():
         if not data:
             return jsonify({"error": "MISSING_OR_INVALID_JSON_PAYLOAD"}), 400
             
-        logging.info(f"[ADMIN] Syncing params for {bot}. Memory_P: {settings['memory_weight']} (Raw: {memory_weight_raw})")
+        bot = data.get("bot")
+        if bot not in ("a", "b"):
+            return jsonify({"error": "INVALID_BOT_ID"}), 400
+            
+        # Clean settings to match schema
+        settings = {
+            "temperature": safe_float(data.get("temperature"), 0.95),
+            "top_p": safe_float(data.get("top_p"), 0.95),
+            "max_new_tokens": safe_int(data.get("max_new_tokens"), 60),
+            "repetition_penalty": safe_float(data.get("repetition_penalty"), 1.3),
+            "memory_weight": safe_float(data.get("memory_weight"), 0.70),
+            "is_active": True
+        }
+        
+        logging.info(f"[ADMIN] Syncing params for {bot}. Temp: {settings['temperature']}")
         
         success = update_bot_settings(sb_client, bot, settings)
         if success:
             return jsonify({"status": "success"})
-        return jsonify({"status": "error", "message": "DATABASE_HANDSHAKE_FAILED"}), 500
+        return jsonify({"status": "error", "message": "DATABASE_REJECTION"}), 500
 
     # GET
     settings = fetch_bot_settings(sb_client)
