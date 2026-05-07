@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
+import { useBYOB } from '@/lib/byob-context'
 import { FileModal } from './file-modal'
 import Link from 'next/link'
 import { StabilityVitals } from './stability-vitals'
@@ -49,6 +50,7 @@ interface HeaderProps {
 export function Header({ onAuthClick }: HeaderProps) {
   const [showFiles, setShowFiles] = useState(false)
   const { user, displayName, isLoading, signOut } = useAuth()
+  const { isActive: byobActive, botName: byobBotName } = useBYOB()
 
   return (
     <>
@@ -70,6 +72,16 @@ export function Header({ onAuthClick }: HeaderProps) {
                 [archive]
               </span>
             </Link>
+            {user && (
+              <Link href="/byob">
+                <span className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${byobActive ? 'text-terminal-green' : 'text-muted-foreground hover:text-primary'}`}>
+                  {byobActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse inline-block" />
+                  )}
+                  {byobActive ? `[${byobBotName}]` : '[byob]'}
+                </span>
+              </Link>
+            )}
             {user?.email === 'kaiser.factorial@gmail.com' && (
               <div className="flex items-center gap-4">
                 <Link href="/admin">

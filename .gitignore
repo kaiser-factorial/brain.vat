@@ -46,3 +46,11 @@ backups/
 brain-vat-hf-deploy/
 deploy_readme.md
 sync_deploy.py
+
+# ── Separated repos ─────────────────────────────────────────────────────────
+training/
+model_checkpoint_*/
+abaci_fix/
+mauk_fix/
+model_H_params.txt
+convo_bots/ANDROID/

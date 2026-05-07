@@ -83,7 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? 
           `${window.location.origin}/auth/callback`,
         data: {
-          display_name: displayNameInput
+          display_name: displayNameInput,
+          tos_accepted_at: new Date().toISOString(),
         }
       }
     })

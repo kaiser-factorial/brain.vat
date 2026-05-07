@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
+import { BYOBProvider } from '@/lib/byob-context'
 import { SystemStatusProvider } from '@/lib/system-status-context'
 import './globals.css'
 
@@ -42,9 +43,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${jetbrainsMono.variable} font-mono antialiased dark`}>
         <AuthProvider>
+          <BYOBProvider>
           <SystemStatusProvider>
             {children}
           </SystemStatusProvider>
+          </BYOBProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

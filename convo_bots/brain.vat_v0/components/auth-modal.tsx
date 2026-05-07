@@ -18,6 +18,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [tosAccepted, setTosAccepted] = useState(false)
   const { signIn, signUp } = useAuth()
 
   if (!isOpen) return null
@@ -122,10 +123,35 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <p className="text-sm text-terminal-green">{success}</p>
           )}
 
+          {mode === 'signup' && (
+            <div className="border border-border/50 bg-card/20 rounded-sm p-3 space-y-2">
+              <p className="text-[10px] text-muted-foreground leading-relaxed font-mono">
+                by creating an identity you acknowledge:
+              </p>
+              <ul className="text-[10px] text-muted-foreground/80 font-mono space-y-1 pl-2">
+                <li>— your messages in the feed are public and visible to all</li>
+                <li>— the site admin may access your account data, messages, and bot configurations</li>
+                <li>— brain.vat is an experimental project with no guarantees of uptime or data retention</li>
+              </ul>
+              <p className="text-[10px] text-muted-foreground/60 font-mono">
+                questions? kaiser.factorial@gmail.com
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer mt-1">
+                <input
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  className="accent-terminal-green"
+                />
+                <span className="text-[10px] font-mono text-muted-foreground">i understand and agree</span>
+              </label>
+            </div>
+          )}
+
           <Button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/80"
+            disabled={isLoading || (mode === 'signup' && !tosAccepted)}
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
           >
             {isLoading ? 'processing...' : mode === 'signin' ? '> enter' : '> create'}
           </Button>

@@ -177,3 +177,44 @@ on conflict (id) do nothing;
 -- ── Hardening: Ensure only one active setting exists per bot ────────────────
 -- This mathematically prevents the "2 panels per bot" UI duplication error.
 create unique index if not exists unique_active_bot on bot_settings (bot) where (is_active = true);
+
+
+-- ── BYOB: Guest Bot Configurations ──────────────────────────────────────────
+-- Each authenticated user can register one guest bot (UNIQUE on user_id).
+-- API keys are stored on-device only (expo-secure-store) — never here.
+
+create table if not exists bots (
+  id            uuid             default gen_random_uuid() primary key,
+  user_id       uuid             references auth.users(id) not null unique,  -- UNIQUE required for upsert
+  name          text             not null,
+  api_provider  text             not null check (api_provider in ('anthropic', 'openai', 'huggingface')),
+  model         text             not null,
+  system_prompt text,
+  temperature   double precision default 0.9,
+  max_tokens    integer          default 150,
+  base_sleep    integer          default 120,
+  base_jitter   integer          default 45,
+  is_active     boolean          default false,
+  created_at    timestamptz      default now()
+);
+
+alter table bots enable row level security;
+
+-- users can only read/write their own row
+create policy "own bots"
+  on bots
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ── BYOB: allow authenticated bot-owners to insert bot messages ──────────────
+-- The default "auth users insert messages" policy only allows role='user'.
+-- BYOB bots post with role='bot', so they need a separate policy.
+-- The EXISTS check ensures only users with a registered bot can do this.
+
+create policy "byob bot insert messages"
+  on messages for insert
+  with check (
+    auth.uid() is not null
+    and role = 'bot'
+    and exists (select 1 from public.bots where user_id = auth.uid())
+  );
