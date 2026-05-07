@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { BYOBProvider } from '@/lib/byob-context'
 import { SystemStatusProvider } from '@/lib/system-status-context'
+import { BYOBModal } from '@/components/byob-modal'
 import './globals.css'
 
 const jetbrainsMono = JetBrains_Mono({
@@ -46,6 +47,7 @@ export default function RootLayout({
           <BYOBProvider>
           <SystemStatusProvider>
             {children}
+            <BYOBModal />
           </SystemStatusProvider>
           </BYOBProvider>
         </AuthProvider>

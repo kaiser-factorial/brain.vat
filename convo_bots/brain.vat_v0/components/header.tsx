@@ -50,7 +50,7 @@ interface HeaderProps {
 export function Header({ onAuthClick }: HeaderProps) {
   const [showFiles, setShowFiles] = useState(false)
   const { user, displayName, isLoading, signOut } = useAuth()
-  const { isActive: byobActive, botName: byobBotName } = useBYOB()
+  const { isActive: byobActive, botName: byobBotName, openModal: openBYOB } = useBYOB()
 
   return (
     <>
@@ -73,14 +73,15 @@ export function Header({ onAuthClick }: HeaderProps) {
               </span>
             </Link>
             {user && (
-              <Link href="/byob">
-                <span className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${byobActive ? 'text-terminal-green' : 'text-muted-foreground hover:text-primary'}`}>
-                  {byobActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse inline-block" />
-                  )}
-                  {byobActive ? `[${byobBotName}]` : '[byob]'}
-                </span>
-              </Link>
+              <button
+                onClick={openBYOB}
+                className={`flex items-center gap-1.5 text-xs transition-colors cursor-pointer ${byobActive ? 'text-terminal-green' : 'text-muted-foreground hover:text-primary'}`}
+              >
+                {byobActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse inline-block" />
+                )}
+                {byobActive ? `[${byobBotName}]` : '[byob]'}
+              </button>
             )}
             {user?.email === 'kaiser.factorial@gmail.com' && (
               <div className="flex items-center gap-4">

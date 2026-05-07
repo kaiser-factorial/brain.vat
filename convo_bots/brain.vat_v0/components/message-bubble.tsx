@@ -1,7 +1,6 @@
 'use client'
 
 import type { Message } from '@/lib/types'
-import { cn } from '@/lib/utils'
 import { parse_message_for_frontend_display } from '@/lib/frontend-message-handlers'
 
 interface MessageBubbleProps {
@@ -32,16 +31,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     speaker = 'BRICK.FACTORIAL'
   }
 
-  const getSpeakerStyle = () => {
+  const getSpeakerColor = (): string => {
     switch (speaker) {
-      case 'MAUK':
-        return 'text-mauk'
-      case 'ABACI':
-        return 'text-abaci'
-      case 'ARCHIE':
-        return 'text-white font-bold tracking-tight'
+      case 'MAUK':   return '#03A6A1'
+      case 'ABACI':  return '#FF9D23'
+      case 'ARCHIE': return '#ffffff'
       default:
-        return 'text-user'
+        // BYOB bots have role='bot'; human users have role='user'
+        return message.role === 'bot' ? '#ffffff' : '#E63946'
     }
   }
 
@@ -53,7 +50,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         </span>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className={cn('text-sm font-mono lowercase', getSpeakerStyle())}>
+            <span className="text-sm font-mono lowercase" style={{ color: getSpeakerColor() }}>
               {speaker.toLowerCase()}:
             </span>
             {speaker === 'ARCHIE' && (

@@ -280,7 +280,7 @@ export async function callProviderAPI(
 
 export class BYOBLoop {
   private config: BYOBConfig
-  private apiKey: string
+  private userId: string
   private running = false
   private consecutiveFailures = 0
   private readonly MAX_FAILURES_BEFORE_BACKOFF = 3
@@ -290,9 +290,9 @@ export class BYOBLoop {
   onError?: (msg: string) => void
   onPost?: (text: string) => void
 
-  constructor(config: BYOBConfig, apiKey: string) {
+  constructor(config: BYOBConfig, userId: string) {
     this.config = config
-    this.apiKey = apiKey
+    this.userId = userId
   }
 
   updateConfig(config: BYOBConfig) { this.config = config }
@@ -332,7 +332,35 @@ export class BYOBLoop {
           content: `${m.speaker}: ${m.text}`,
         }))
 
-        const responseText = await callProviderAPI(history, this.config, this.apiKey)
+        // Call via server route to avoid CORS issues with external APIs
+        const res = await fetch('/api/byob/infer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: this.userId,
+            provider: this.config.provider,
+            model: this.config.model,
+            messages: history,
+            config: {
+              systemPrompt: this.config.systemPrompt,
+              temperature: this.config.temperature,
+              maxTokens: this.config.maxTokens,
+              botName: this.config.botName,
+            },
+          }),
+        })
+
+        const data = await res.json()
+
+        if (data.skip) {
+          throw new SkipCycleError(data.reason ?? 'skipped by server')
+        }
+        if (!res.ok || data.error) {
+          throw new Error(data.error ?? `HTTP ${res.status}`)
+        }
+
+        const responseText: string = data.text
+        if (!responseText) throw new SkipCycleError('empty response')
 
         this.onStatusChange?.('posting')
         const { error: insertError } = await supabase.from('messages').insert({

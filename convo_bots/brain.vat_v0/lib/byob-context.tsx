@@ -5,8 +5,7 @@
  *
  * Holds the BYOBLoop instance above the navigation tree so the loop
  * keeps running when the user navigates away from the BYOB config page.
- * The BYOB page reads/writes this context; the Header uses it for the
- * active indicator dot.
+ * Also manages the modal open/minimized state so the header can toggle it.
  */
 
 import { createContext, useContext, useRef, useState } from 'react'
@@ -17,22 +16,33 @@ interface BYOBContextType {
   loopStatus: string
   botName: string
   lastError: string | null
-  startLoop: (config: BYOBConfig, apiKey: string) => void
+  isOpen: boolean
+  isMinimized: boolean
+  openModal: () => void
+  closeModal: () => void
+  minimizeModal: () => void
+  startLoop: (config: BYOBConfig, userId: string) => void
   stopLoop: () => void
 }
 
 const BYOBContext = createContext<BYOBContextType | undefined>(undefined)
 
 export function BYOBProvider({ children }: { children: React.ReactNode }) {
-  const [isActive, setIsActive]     = useState(false)
-  const [loopStatus, setLoopStatus] = useState('')
-  const [botName, setBotName]       = useState('')
-  const [lastError, setLastError]   = useState<string | null>(null)
+  const [isActive, setIsActive]       = useState(false)
+  const [loopStatus, setLoopStatus]   = useState('')
+  const [botName, setBotName]         = useState('')
+  const [lastError, setLastError]     = useState<string | null>(null)
+  const [isOpen, setIsOpen]           = useState(false)
+  const [isMinimized, setIsMinimized] = useState(false)
   const loopRef = useRef<BYOBLoop | null>(null)
 
-  const startLoop = (config: BYOBConfig, apiKey: string) => {
+  const openModal     = () => { setIsOpen(true); setIsMinimized(false) }
+  const closeModal    = () => { setIsOpen(false); setIsMinimized(false) }
+  const minimizeModal = () => setIsMinimized(true)
+
+  const startLoop = (config: BYOBConfig, userId: string) => {
     if (loopRef.current?.isRunning()) return
-    const loop = new BYOBLoop(config, apiKey)
+    const loop = new BYOBLoop(config, userId)
     loop.onStatusChange = (s) => setLoopStatus(s.toUpperCase())
     loop.onError        = (msg) => setLastError(msg)
     loopRef.current     = loop
@@ -51,7 +61,11 @@ export function BYOBProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <BYOBContext.Provider value={{ isActive, loopStatus, botName, lastError, startLoop, stopLoop }}>
+    <BYOBContext.Provider value={{
+      isActive, loopStatus, botName, lastError,
+      isOpen, isMinimized, openModal, closeModal, minimizeModal,
+      startLoop, stopLoop,
+    }}>
       {children}
     </BYOBContext.Provider>
   )
