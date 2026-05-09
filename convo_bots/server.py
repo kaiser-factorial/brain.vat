@@ -188,34 +188,37 @@ def ensure_model(bot: str):
         return False
 
     try:
-        logging.info(f"Loading {bot} into RAM...")
-        # Use standard 'gpt2' tokenizer to avoid local JSON corruption issues
-        tokenizer = AutoTokenizer.from_pretrained("gpt2", token=os.getenv("HF_TOKEN"))
-        tokenizer.pad_token = tokenizer.eos_token
+        logging.info(f"[{bot}] Initializing models and tokenizer from: {path}")
+        # IMPORTANT: We load the model-specific tokenizer to support custom <think> tokens!
+        tokenizers[bot] = AutoTokenizer.from_pretrained(path)
         
-        model = AutoModelForCausalLM.from_pretrained(
-            path, 
-            torch_dtype=torch.float32,
-            low_cpu_mem_usage=True,
-            token=os.getenv("HF_TOKEN")
-        ).to(DEVICE)
-        model.eval()
-
-        with model_lock:
-            models[bot] = model
-            tokenizers[bot] = tokenizer
-            load_status[bot] = "ready"
+        # Ensure special tokens are recognized
+        if "<think>" not in tokenizers[bot].get_vocab():
+            tokenizers[bot].add_special_tokens({"additional_special_tokens": ["<think>", "</think>"]})
             
-            # Initialize MemoryGraph for this bot now that model is ready
-            if MEMORY_AVAILABLE:
-                memory_graphs[bot] = MemoryGraph(
-                    save_path=MEMORY_DIR / f"memory_{bot}.json",
-                    bot_name=BOT_A_NAME if bot == "a" else BOT_B_NAME,
-                    bot_key=bot,
-                    model=model,
-                    tokenizer=tokenizer,
-                    device=DEVICE
-                )
+        models[bot] = AutoModelForCausalLM.from_pretrained(path).to(DEVICE)
+        
+        # Sync model version to Supabase if available
+        if SUPABASE_UTILS_AVAILABLE and sb_client:
+            version_str = path.split("_")[-1] if "_" in path else "v1"
+            try:
+                update_bot_settings(sb_client, bot, {"model_version": version_str})
+                logging.info(f"[{bot}] Successfully synced model_version to {version_str}")
+            except Exception as db_err:
+                logging.error(f"[{bot}] Failed to sync version to DB: {db_err}")
+                
+        load_status[bot] = "ready"
+        
+        # Initialize MemoryGraph for this bot now that model is ready
+        if MEMORY_AVAILABLE:
+            memory_graphs[bot] = MemoryGraph(
+                save_path=MEMORY_DIR / f"memory_{bot}.json",
+                bot_name=BOT_A_NAME if bot == "a" else BOT_B_NAME,
+                bot_key=bot,
+                model=models[bot],
+                tokenizer=tokenizers[bot],
+                device=DEVICE
+            )
 
         logging.info(f"Bot {bot} READY (Memory pipeline linked).")
         return True
@@ -344,12 +347,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
             if memory_trace:
                 logging.info(f"[{bot_name}] Memory Trace: Recalled '{memory_trace}'")
 
-        inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
-        prompt_len = inputs["input_ids"].shape[1]
-
         # --- BANNED WORDS CACHING ---
-        # Cache tokenized banned words to avoid redundant encoding on every turn
-        # sorting ensures that order changes in the list don't invalidate the cache
         clean_words = sorted([w.strip() for w in bot_settings["banned_words"] if w.strip()])
         cache_key = f"{bot}:{','.join(clean_words)}"
         
@@ -529,6 +527,10 @@ def admin_settings():
         if bot not in ("a", "b"):
             return jsonify({"error": "INVALID_BOT_ID"}), 400
             
+        # Dynamically protect the model_version so it isn't wiped out by a UI save!
+        path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
+        version_str = path.split("_")[-1] if "_" in path else "v1"
+        
         settings = {
             "temperature": safe_float(data.get("temperature"), 0.95),
             "top_p": safe_float(data.get("top_p"), 0.95),
@@ -539,6 +541,7 @@ def admin_settings():
             "base_sleep": safe_int(data.get("base_sleep") or data.get("cycle_sleep"), 120),
             "base_jitter": safe_int(data.get("base_jitter") or data.get("cycle_jitter"), 30),
             "banned_words": data.get("banned_words") if isinstance(data.get("banned_words"), list) else [],
+            "model_version": version_str,
             "is_active": True
         }
         

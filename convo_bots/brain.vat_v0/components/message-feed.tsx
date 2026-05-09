@@ -70,7 +70,7 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase])
+  }, [supabase, speakMessage])
 
   // Scroll to bottom effect
   useEffect(() => {

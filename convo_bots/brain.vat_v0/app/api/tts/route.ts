@@ -17,6 +17,7 @@ const VOICE_IDS: Record<string, string> = {
 export async function POST(req: Request) {
   const apiKey = process.env.MISTRAL_API_KEY
   if (!apiKey) {
+    console.error('[TTS] MISTRAL_API_KEY is not set!')
     return new Response('MISTRAL_API_KEY not configured', { status: 500 })
   }
 
@@ -34,29 +35,41 @@ export async function POST(req: Request) {
 
   const voiceId = VOICE_IDS[speaker]
   if (!voiceId) {
+    console.error(`[TTS] Unknown speaker: ${speaker}`)
     return new Response(`Unknown speaker: ${speaker}`, { status: 400 })
   }
+
+  const requestBody = {
+    model:           VOXTRAL_MODEL,
+    input:           clean,
+    voice:           voiceId,
+    response_format: 'mp3',
+  }
+
+  console.log(`[TTS] → Mistral | speaker=${speaker} voice=${voiceId} text_len=${clean.length}`)
+  console.log(`[TTS] → Request body:`, JSON.stringify(requestBody))
 
   try {
     const upstream = await fetch(MISTRAL_TTS_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'Content-Type':  'application/json',
       },
-      body: JSON.stringify({
-        model:           VOXTRAL_MODEL,
-        input:           clean,
-        voice:           voiceId,
-        response_format: 'mp3',
-        stream:          false,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
+    const contentType = upstream.headers.get('content-type') ?? 'unknown'
+    console.log(`[TTS] ← Mistral status=${upstream.status} content-type=${contentType}`)
+
     if (!upstream.ok) {
-      const err = await upstream.text().catch(() => 'unknown')
-      console.error(`[TTS] Mistral error ${upstream.status}:`, err)
-      return new Response('TTS synthesis failed', { status: 502 })
+      const errText = await upstream.text().catch(() => '<unreadable>')
+      console.error(`[TTS] ← Mistral error ${upstream.status}:`, errText)
+      // Return the raw Mistral error so the client can log it
+      return new Response(
+        JSON.stringify({ mistralStatus: upstream.status, mistralError: errText }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
     // Stream the audio straight back to the browser
@@ -65,6 +78,9 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     console.error('[TTS] Fetch error:', err)
-    return new Response('TTS request failed', { status: 500 })
+    return new Response(
+      JSON.stringify({ fetchError: String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 }

@@ -50,9 +50,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <span className={cn('text-sm font-mono lowercase', getSpeakerStyle())}>
             {speaker.toLowerCase()}:
           </span>
-          <span className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-            {parsed.text}
-          </span>
+          <div className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+            {parsed.text.split(/(<think>[\s\S]*?(?:<\/think>|$))/gi).map((part, index) => {
+              if (part.toLowerCase().startsWith('<think>')) {
+                const thoughtText = part.replace(/<think>/i, '').replace(/<\/think>/i, '');
+                return (
+                  <span key={index} className="font-bold italic text-foreground/60">
+                    {thoughtText}
+                  </span>
+                );
+              }
+              return <span key={index}>{part}</span>;
+            })}
+          </div>
           {parsed.continuation && (
             <div className="mt-1 ml-4 border-l-2 border-border pl-2 border-opacity-30">
               <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-50">
