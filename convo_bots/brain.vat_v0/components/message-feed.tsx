@@ -8,6 +8,7 @@ import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { toast } from 'sonner'
 import { format_user_message } from '@/lib/frontend-message-handlers'
+import { useVoiceMode } from './voice-mode-context'
 
 interface MessageFeedProps {
   onAuthClick?: () => void
@@ -21,6 +22,7 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
   const feedRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const { user, displayName } = useAuth()
+  const { speakMessage } = useVoiceMode()
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -58,7 +60,9 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: { new: Message }) => {
-          setMessages((prev) => [...prev, payload.new as Message])
+          const newMsg = payload.new as Message
+          setMessages((prev) => [...prev, newMsg])
+          speakMessage(newMsg)  // ← VOICE
         }
       )
       .subscribe()

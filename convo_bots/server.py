@@ -366,7 +366,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
 
         # --- RANDOM THINK INJECTOR ---
         forced_thought = False
-        if random.random() < 0.35:
+        if random.random() < 1.0: # TEMPORARILY FORCED TO 100% FOR TESTING
             prompt += "<think>"
             forced_thought = True
             logging.info(f"[{bot_name}] Forcing a <think> tag via random injector.")
@@ -565,6 +565,10 @@ def admin_settings():
         if bot not in ("a", "b"):
             return jsonify({"error": "INVALID_BOT_ID"}), 400
             
+        # Dynamically protect the model_version so it isn't wiped out by a UI save!
+        path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
+        version_str = path.split("_")[-1] if "_" in path else "v1"
+        
         settings = {
             "temperature": safe_float(data.get("temperature"), 0.95),
             "top_p": safe_float(data.get("top_p"), 0.95),
@@ -575,6 +579,7 @@ def admin_settings():
             "base_sleep": safe_int(data.get("base_sleep") or data.get("cycle_sleep"), 120),
             "base_jitter": safe_int(data.get("base_jitter") or data.get("cycle_jitter"), 30),
             "banned_words": data.get("banned_words") if isinstance(data.get("banned_words"), list) else [],
+            "model_version": version_str,
             "is_active": True
         }
         

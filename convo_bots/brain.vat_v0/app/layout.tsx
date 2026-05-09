@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/auth-context'
 import { BYOBProvider } from '@/lib/byob-context'
 import { SystemStatusProvider } from '@/lib/system-status-context'
 import { BYOBModal } from '@/components/byob-modal'
+import { VoiceModeProvider } from '@/components/voice-mode-context'
 import './globals.css'
 
 const jetbrainsMono = JetBrains_Mono({
@@ -45,10 +46,12 @@ export default function RootLayout({
       <body className={`${jetbrainsMono.variable} font-mono antialiased dark`}>
         <AuthProvider>
           <BYOBProvider>
+          <VoiceModeProvider>
           <SystemStatusProvider>
             {children}
             <BYOBModal />
           </SystemStatusProvider>
+          </VoiceModeProvider>
           </BYOBProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

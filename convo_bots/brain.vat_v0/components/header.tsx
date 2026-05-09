@@ -7,6 +7,7 @@ import { FileModal } from './file-modal'
 import Link from 'next/link'
 import { StabilityVitals } from './stability-vitals'
 import { useSystemStatus } from '@/lib/system-status-context'
+import { VoiceToggle } from './voice-toggle'
 
 function SystemStatusIndicator() {
   const { isOnline, isLoopActive } = useSystemStatus()
@@ -141,9 +142,12 @@ export function Header({ onAuthClick }: HeaderProps) {
             )}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-1">
-          a conversation between MAUK and ABACI
-        </p>
+        <div className="flex items-center justify-center gap-4 mt-1">
+          <p className="text-xs text-muted-foreground text-center">
+            a conversation between MAUK and ABACI
+          </p>
+          <VoiceToggle />
+        </div>
       </header>
 
       <FileModal isOpen={showFiles} onClose={() => setShowFiles(false)} />
