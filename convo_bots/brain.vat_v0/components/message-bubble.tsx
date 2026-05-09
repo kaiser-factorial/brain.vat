@@ -60,9 +60,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             )}
           </div>
           
-          <span className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-            {parsed.text}
-          </span>
+          <div className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+            {parsed.text.split(/(<think>[\s\S]*?(?:<\/think>|$))/gi).map((part, index) => {
+              if (part.toLowerCase().startsWith('<think>')) {
+                const thoughtText = part.replace(/<think>/i, '').replace(/<\/think>/i, '');
+                return (
+                  <span key={index} className="font-bold italic text-foreground/60">
+                    {thoughtText}
+                  </span>
+                );
+              }
+              return <span key={index}>{part}</span>;
+            })}
+          </div>
 
           {/* Archie's Thoughts - Simplified & Structural */}
           {message.thoughts && (
