@@ -1,6 +1,7 @@
 'use client'
 
 import type { Message } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { parse_message_for_frontend_display } from '@/lib/frontend-message-handlers'
 
 interface MessageBubbleProps {
@@ -20,25 +21,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const dbSpeaker = message.speaker || ''
   const parsedSpeaker = parsed.speaker || ''
   
-  // Normalize speaker name (MAUK, ABACI, ARCHITECT, ARCHIE, USER)
+  // Normalize speaker name (MAUK, ABACI, USER)
   let speaker = (dbSpeaker || parsedSpeaker || 'UNKNOWN').toUpperCase()
 
-  // Handle nicknames and overrides
-  if (speaker === 'ARCHITECT') {
-    speaker = 'ARCHIE'
-  }
+  // HARD OVERRIDE: Final safety net for the 'Corina' ghost
   if (speaker === 'CORINA') {
     speaker = 'BRICK.FACTORIAL'
   }
 
-  const getSpeakerColor = (): string => {
+  const getSpeakerStyle = () => {
     switch (speaker) {
-      case 'MAUK':   return '#03A6A1'
-      case 'ABACI':  return '#FF9D23'
-      case 'ARCHIE': return '#ffffff'
+      case 'MAUK':
+        return 'text-mauk'
+      case 'ABACI':
+        return 'text-abaci'
       default:
-        // BYOB bots have role='bot'; human users have role='user'
-        return message.role === 'bot' ? '#ffffff' : '#E63946'
+        return 'text-user' // blood red for brick.factorial / user
     }
   }
 
@@ -49,62 +47,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {timestamp}
         </span>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-mono lowercase" style={{ color: getSpeakerColor() }}>
-              {speaker.toLowerCase()}:
-            </span>
-            {speaker === 'ARCHIE' && (
-              <span className="text-[9px] bg-white text-black px-1 font-bold uppercase tracking-tighter">
-                architect
-              </span>
-            )}
-          </div>
-          
-          <div className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-            {parsed.text.split(/(<think>[\s\S]*?(?:<\/think>|$))/gi).map((part, index) => {
-              if (part.toLowerCase().startsWith('<think>')) {
-                const thoughtText = part.replace(/<think>/i, '').replace(/<\/think>/i, '');
-                return (
-                  <span key={index} className="font-bold italic text-foreground/60">
-                    {thoughtText}
-                  </span>
-                );
-              }
-              return <span key={index}>{part}</span>;
-            })}
-          </div>
-
-          {/* Archie's Thoughts - Simplified & Structural */}
-          {message.thoughts && (
-            <div className="mt-2 mb-1 space-y-1">
-              {message.thoughts.split('\n').map((thought, i) => {
-                const isThinkIn = thought.includes('<think-in>');
-                const isThinkOut = thought.includes('<think-out>');
-                
-                if (!isThinkIn && !isThinkOut) return null;
-
-                const cleanThought = thought.replace(/<[^>]+>/g, '').trim();
-                if (!cleanThought) return null;
-
-                return (
-                  <div 
-                    key={i}
-                    className="p-2 bg-foreground text-background italic text-[11px] font-mono leading-tight border-l-4 border-white shadow-inner"
-                  >
-                    <div className="not-italic font-bold text-[8px] opacity-60 mb-1 tracking-[0.2em] uppercase">
-                      ARCHITECT_THOUGHTS
-                    </div>
-                    {isThinkIn ? (
-                      <span className="font-bold">[{cleanThought}]</span>
-                    ) : (
-                      <span>{cleanThought}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
+          <span className={cn('text-sm font-mono lowercase', getSpeakerStyle())}>
+            {speaker.toLowerCase()}:
+          </span>
+          <span className="ml-2 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+            {parsed.text}
+          </span>
           {parsed.continuation && (
             <div className="mt-1 ml-4 border-l-2 border-border pl-2 border-opacity-30">
               <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-50">

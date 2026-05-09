@@ -189,8 +189,8 @@ def ensure_model(bot: str):
 
     try:
         logging.info(f"Loading {bot} into RAM...")
-        # Use the specific tokenizer from the model repo to ensure it has the new <think> special tokens
-        tokenizer = AutoTokenizer.from_pretrained(path, token=os.getenv("HF_TOKEN"))
+        # Use standard 'gpt2' tokenizer to avoid local JSON corruption issues
+        tokenizer = AutoTokenizer.from_pretrained("gpt2", token=os.getenv("HF_TOKEN"))
         tokenizer.pad_token = tokenizer.eos_token
         
         model = AutoModelForCausalLM.from_pretrained(
@@ -216,26 +216,6 @@ def ensure_model(bot: str):
                     tokenizer=tokenizer,
                     device=DEVICE
                 )
-                
-            # Auto-sync the version to the database so the frontend Admin Panel is accurate
-            if SUPABASE_UTILS_AVAILABLE and sb_client:
-                try:
-                    version_str = path.split("_")[-1] if "_" in path else "v1"
-                    
-                    # Fetch current settings to avoid overwriting them with NULLs
-                    all_settings = fetch_bot_settings(sb_client)
-                    current_settings = next((s for s in all_settings if s["bot"] == bot), {})
-                    
-                    if current_settings.get("model_version") != version_str:
-                        current_settings["model_version"] = version_str
-                        # Remove DB metadata before re-insert
-                        for key in ["id", "created_at", "updated_at"]:
-                            current_settings.pop(key, None)
-                            
-                        update_bot_settings(sb_client, bot, current_settings)
-                        logging.info(f"Synced {bot} version to DB: {version_str}")
-                except Exception as e:
-                    logging.warning(f"Failed to sync model version: {e}")
 
         logging.info(f"Bot {bot} READY (Memory pipeline linked).")
         return True
@@ -364,13 +344,6 @@ def generate_response(bot: str, history: list[dict]) -> str:
             if memory_trace:
                 logging.info(f"[{bot_name}] Memory Trace: Recalled '{memory_trace}'")
 
-        # --- RANDOM THINK INJECTOR ---
-        forced_thought = False
-        if random.random() < 1.0: # TEMPORARILY FORCED TO 100% FOR TESTING
-            prompt += "<think>"
-            forced_thought = True
-            logging.info(f"[{bot_name}] Forcing a <think> tag via random injector.")
-
         inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
         prompt_len = inputs["input_ids"].shape[1]
 
@@ -437,16 +410,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
                     eos_token_id=tokenizers[bot].eos_token_id,
                 )
 
-        # Decode without skipping special tokens so we don't lose the <think> tags!
-        raw = tokenizers[bot].decode(output[0][prompt_len:], skip_special_tokens=False)
-        # Strip the EOS token manually since we aren't skipping special tokens anymore
-        raw = raw.replace(tokenizers[bot].eos_token, "")
-        
-        # If we forced a thought in the prompt, the model's output slice won't include 
-        # the opening tag, so we must manually prepend it back for the UI parser!
-        if forced_thought:
-            raw = "<think>" + raw
-            
+        raw = tokenizers[bot].decode(output[0][prompt_len:], skip_special_tokens=True)
         response_text = strip_dialogue_prefix(raw, bot_name)
         
         # AUDIT: Log the interaction with deep diagnostics
@@ -565,10 +529,6 @@ def admin_settings():
         if bot not in ("a", "b"):
             return jsonify({"error": "INVALID_BOT_ID"}), 400
             
-        # Dynamically protect the model_version so it isn't wiped out by a UI save!
-        path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
-        version_str = path.split("_")[-1] if "_" in path else "v1"
-        
         settings = {
             "temperature": safe_float(data.get("temperature"), 0.95),
             "top_p": safe_float(data.get("top_p"), 0.95),
@@ -579,7 +539,6 @@ def admin_settings():
             "base_sleep": safe_int(data.get("base_sleep") or data.get("cycle_sleep"), 120),
             "base_jitter": safe_int(data.get("base_jitter") or data.get("cycle_jitter"), 30),
             "banned_words": data.get("banned_words") if isinstance(data.get("banned_words"), list) else [],
-            "model_version": version_str,
             "is_active": True
         }
         
