@@ -19,13 +19,16 @@ def build_enhanced_dialogue_prompt(
     generating_bot: str, 
     memory_concepts: List[Dict] = None,
     workspace_files: List[Dict] = None,
-    context_turns: int = 4
+    context_turns: int = 4,
+    bot_name_override: str = None,
 ) -> str:
     """
     Lean prompt builder that returns to the original dialogue format.
     Removed INSTRUCTION, MEMORY, and FILE blocks to stop model confusion.
+    Supports bot keys a/b (MAUK/ABACI) and any additional bots via bot_name_override.
     """
-    bot_name = BOT_A_NAME if generating_bot == "a" else BOT_B_NAME
+    _name_map = {"a": BOT_A_NAME, "b": BOT_B_NAME}
+    bot_name = bot_name_override or _name_map.get(generating_bot, generating_bot.upper())
     
     lines = []
     

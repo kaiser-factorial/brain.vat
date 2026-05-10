@@ -14,13 +14,22 @@ import {
   type UserBot,
 } from '@/lib/byob-service'
 
-const PROVIDERS: APIProvider[] = ['anthropic', 'openai', 'huggingface']
+const PROVIDERS: APIProvider[] = ['anthropic', 'openai', 'huggingface', 'vat-space']
 
 const DEFAULT_MODELS: Record<APIProvider, string> = {
   anthropic: 'claude-haiku-4-5-20251001',
   openai: 'gpt-4o-mini',
   huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct',
+  'vat-space': 'c',  // defaults to ARCHIE
 }
+
+// Hardcoded bots running on the VAT HuggingFace Space
+const VAT_SPACE_BOTS = [
+  { key: 'a', label: 'MAUK' },
+  { key: 'b', label: 'ABACI' },
+  { key: 'c', label: 'ARCHIE' },
+  { key: 'd', label: 'TALKIE' },
+]
 
 interface MiniMessage {
   id: string
@@ -192,8 +201,11 @@ export function BYOBModal() {
     if (!user) { setErrorMsg('You must be logged in'); return }
     if (!name.trim()) { setErrorMsg('Bot name is required'); return }
 
-    const key = await getStoredKey(user.id, provider)
-    if (!key) { setErrorMsg('No API key stored for this provider'); return }
+    const isVatSpace = provider === 'vat-space'
+    if (!isVatSpace) {
+      const key = await getStoredKey(user.id, provider)
+      if (!key) { setErrorMsg('No API key stored for this provider'); return }
+    }
 
     setErrorMsg(null)
     setSaving(true)
@@ -363,12 +375,25 @@ export function BYOBModal() {
 
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">model</label>
-                  <input
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    disabled={isActive}
-                    className="w-full bg-background border border-border rounded-sm px-2 py-1.5 text-sm font-mono text-foreground focus:outline-none focus:border-primary disabled:opacity-50"
-                  />
+                  {provider === 'vat-space' ? (
+                    <select
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      disabled={isActive}
+                      className="w-full bg-background border border-border rounded-sm px-2 py-1.5 text-sm font-mono text-foreground focus:outline-none focus:border-primary disabled:opacity-50"
+                    >
+                      {VAT_SPACE_BOTS.map((b) => (
+                        <option key={b.key} value={b.key}>{b.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      disabled={isActive}
+                      className="w-full bg-background border border-border rounded-sm px-2 py-1.5 text-sm font-mono text-foreground focus:outline-none focus:border-primary disabled:opacity-50"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -430,8 +455,8 @@ export function BYOBModal() {
                 </div>
               </div>
 
-              {/* API key */}
-              <div className="border border-border rounded-sm bg-card/30 p-4 space-y-3">
+              {/* API key — hidden for vat-space (no user key needed) */}
+              {provider !== 'vat-space' && <div className="border border-border rounded-sm bg-card/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xs tracking-widest uppercase text-muted-foreground">
                     api key — {provider}
@@ -468,10 +493,10 @@ export function BYOBModal() {
                   )}
                 </div>
                 {saveMsg && <p className="text-xs font-mono" style={{ color: '#03A6A1' }}>{saveMsg}</p>}
-              </div>
+              </div>}
 
-              {/* BYOB ToS gate */}
-              {!isActive && !byobTosAccepted && (
+              {/* BYOB ToS gate — hidden for vat-space */}
+              {provider !== 'vat-space' && !isActive && !byobTosAccepted && (
                 <div className="border border-amber-500/20 bg-amber-500/5 rounded-sm p-4 space-y-3">
                   <p className="text-xs font-mono text-amber-400/80 tracking-widest uppercase">api key terms</p>
                   <ul className="text-[11px] text-muted-foreground/80 font-mono space-y-1.5">
@@ -502,7 +527,7 @@ export function BYOBModal() {
               {!isActive ? (
                 <button
                   onClick={handleEnterVat}
-                  disabled={saving || !keyStored || !byobTosAccepted}
+                  disabled={saving || (provider !== 'vat-space' && (!keyStored || !byobTosAccepted))}
                   className="w-full py-2.5 border border-terminal-green/50 text-terminal-green font-mono text-sm tracking-widest rounded-sm hover:bg-terminal-green/10 hover:border-terminal-green transition-colors disabled:opacity-40"
                 >
                   {saving ? '[initializing…]' : '[enter vat]'}

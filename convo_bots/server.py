@@ -104,14 +104,20 @@ def safe_int(val, default):
 # ── Config ────────────────────────────────────────────────────────────────────
 MODEL_A_PATH  = os.getenv("MODEL_A_PATH", str(BASE_DIR.parent / "model_checkpoint_mauk_1"))
 MODEL_B_PATH  = os.getenv("MODEL_B_PATH", str(BASE_DIR.parent / "model_checkpoint_abaci_1"))
+MODEL_C_PATH  = os.getenv("MODEL_C_PATH", "brick-factorial/archie-v1")
+MODEL_D_PATH  = os.getenv("MODEL_D_PATH", "")  # e.g. talkie-lm/talkie-1930-13b-instruct
 
 BOT_A_NAME = os.getenv("BOT_A_NAME", "MAUK")
 BOT_B_NAME = os.getenv("BOT_B_NAME", "ABACI")
+BOT_C_NAME = os.getenv("BOT_C_NAME", "ARCHIE")
+BOT_D_NAME = os.getenv("BOT_D_NAME", "TALKIE")
 USER_NAME  = os.getenv("USER_NAME",  "brick.factorial")
 
 SETTINGS = {
     "temperature_a":      float(os.getenv("TEMPERATURE_A", 0.95)),
     "temperature_b":      float(os.getenv("TEMPERATURE_B", 1.25)),
+    "temperature_c":      float(os.getenv("TEMPERATURE_C", 0.90)),
+    "temperature_d":      float(os.getenv("TEMPERATURE_D", 0.90)),
     "top_p":              float(os.getenv("TOP_P", 0.95)),
     "repetition_penalty": float(os.getenv("REPETITION_PENALTY", 1.30)),
     "max_new_tokens":     int(os.getenv("MAX_NEW_TOKENS", 60)),
@@ -126,16 +132,16 @@ else:
     DEVICE = None
 
 # ── Model Management ──────────────────────────────────────────────────────────
-models = {"a": None, "b": None}
-tokenizers = {"a": None, "b": None}
-load_status = {"a": "unloaded", "b": "unloaded"}
-memory_graphs = {"a": None, "b": None}
+models = {"a": None, "b": None, "c": None, "d": None}
+tokenizers = {"a": None, "b": None, "c": None, "d": None}
+load_status = {"a": "unloaded", "b": "unloaded", "c": "unloaded", "d": "unloaded"}
+memory_graphs = {"a": None, "b": None, "c": None, "d": None}
 model_lock = threading.Lock()
 logging_lock = threading.Lock()
 cache_lock = threading.Lock()
 
 # Pause state (in-memory for safe-default behavior on crash)
-LOOP_PAUSES = {"a": False, "b": False}
+LOOP_PAUSES = {"a": False, "b": False, "c": False, "d": False}
 
 def get_loop_status():
     """Verify which loop processes are active via their specific PID files or Cloud Thread."""
@@ -180,7 +186,12 @@ def ensure_model(bot: str):
         if load_status[bot] == "loading": return False
         load_status[bot] = "loading"
 
-    path = MODEL_A_PATH if bot == "a" else MODEL_B_PATH
+    _paths = {"a": MODEL_A_PATH, "b": MODEL_B_PATH, "c": MODEL_C_PATH, "d": MODEL_D_PATH}
+    path = _paths.get(bot, "")
+    if not path:
+        logging.warning(f"[{bot}] No model path configured — skipping load")
+        load_status[bot] = "demo"
+        return False
     # Only fail if it's not a local path AND doesn't look like a Hugging Face repo ID
     if not os.path.exists(path) and "/" not in path:
         logging.error(f"Checkpoint not found: {path}")
@@ -211,9 +222,10 @@ def ensure_model(bot: str):
         
         # Initialize MemoryGraph for this bot now that model is ready
         if MEMORY_AVAILABLE:
+            _names = {"a": BOT_A_NAME, "b": BOT_B_NAME, "c": BOT_C_NAME, "d": BOT_D_NAME}
             memory_graphs[bot] = MemoryGraph(
                 save_path=MEMORY_DIR / f"memory_{bot}.json",
-                bot_name=BOT_A_NAME if bot == "a" else BOT_B_NAME,
+                bot_name=_names.get(bot, bot),
                 bot_key=bot,
                 model=models[bot],
                 tokenizer=tokenizers[bot],
@@ -268,7 +280,8 @@ def log_prompt(bot: str, prompt: str, response: str, settings: dict = None, memo
         logging.error(f"Failed to log prompt audit: {e}")
 
 def generate_response(bot: str, history: list[dict]) -> str:
-    bot_name = BOT_A_NAME if bot == "a" else BOT_B_NAME
+    _bot_names = {"a": BOT_A_NAME, "b": BOT_B_NAME, "c": BOT_C_NAME, "d": BOT_D_NAME}
+    bot_name = _bot_names.get(bot, bot)
     
     demo_lines = {
         "a": ["my inference is not functioning"],
@@ -283,7 +296,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
     try:
         # FETCH SETTINGS from Supabase (Real-time override)
         bot_settings = {
-            "temperature": SETTINGS["temperature_a"] if bot == "a" else SETTINGS["temperature_b"],
+            "temperature": SETTINGS.get(f"temperature_{bot}", SETTINGS["temperature_a"]),
             "top_p": SETTINGS["top_p"],
             "repetition_penalty": SETTINGS["repetition_penalty"],
             "max_new_tokens": SETTINGS["max_new_tokens"],
@@ -337,15 +350,57 @@ def generate_response(bot: str, history: list[dict]) -> str:
             bot_settings["repetition_penalty"] = SETTINGS["repetition_penalty"]
             bot_settings["max_new_tokens"] = SETTINGS["max_new_tokens"]
 
-        prompt = build_enhanced_dialogue_prompt(history, bot)
-        
-        # --- MEMORY RETRIEVAL (Trace) ---
-        memory_trace = None
-        if MEMORY_AVAILABLE and memory_graphs[bot]:
-            # Respect the memory_weight (0 - 1.0) for retrieval probability
-            prompt, memory_trace = memory_graphs[bot].prompt_injection(prompt, blend_weight=bot_settings["memory_weight"])
-            if memory_trace:
-                logging.info(f"[{bot_name}] Memory Trace: Recalled '{memory_trace}'")
+        # --- PROMPT BUILDING ---
+        # Detect whether the model uses a chat template (e.g. Qwen/instruction-tuned)
+        # or expects raw completion (e.g. MAUK/ABACI GPT-2 style).
+        use_chat_template = bool(getattr(tokenizers[bot], "chat_template", None))
+
+        if use_chat_template:
+            # Build a structured chat for instruction-tuned models (Qwen, Llama-Instruct, etc.)
+            # Gather recent turns as proper role messages
+            recent = history[-(4):] if history else []
+            chat_messages = []
+            if bot_settings.get("system_prompt"):
+                chat_messages.append({"role": "system", "content": bot_settings["system_prompt"]})
+            for msg in recent:
+                speaker = msg.get("speaker", "")
+                text = msg.get("text", "").strip().replace("\n", " ")
+                role = "assistant" if speaker == bot_name else "user"
+                chat_messages.append({"role": role, "content": f"[{speaker}]: {text}"})
+            # If last message is already from assistant, add a nudge so model continues
+            if chat_messages and chat_messages[-1]["role"] == "assistant":
+                chat_messages.append({"role": "user", "content": f"[continue as {bot_name}]"})
+            inputs = tokenizers[bot].apply_chat_template(
+                chat_messages,
+                tokenize=True,
+                add_generation_prompt=True,
+                return_tensors="pt",
+            ).to(DEVICE)
+            prompt = str(chat_messages)  # for audit log only
+        else:
+            # Raw completion path for GPT-2 style fine-tuned models
+            prompt = build_enhanced_dialogue_prompt(history, bot)
+
+            # --- MEMORY RETRIEVAL (Trace) ---
+            memory_trace = None
+            if MEMORY_AVAILABLE and memory_graphs[bot]:
+                prompt, memory_trace = memory_graphs[bot].prompt_injection(prompt, blend_weight=bot_settings["memory_weight"])
+                if memory_trace:
+                    logging.info(f"[{bot_name}] Memory Trace: Recalled '{memory_trace}'")
+
+            inputs = tokenizers[bot](prompt, return_tensors="pt").to(DEVICE)
+
+        # prompt_len used to strip the prompt tokens from the output
+        if isinstance(inputs, dict) or hasattr(inputs, "input_ids"):
+            prompt_len = inputs["input_ids"].shape[1]
+        else:
+            # apply_chat_template with return_tensors returns a tensor directly
+            prompt_len = inputs.shape[1]
+            inputs = {"input_ids": inputs}
+
+        # Set memory_trace for audit (chat template path skips memory for now)
+        if use_chat_template:
+            memory_trace = None
 
         # --- BANNED WORDS CACHING ---
         clean_words = sorted([w.strip() for w in bot_settings["banned_words"] if w.strip()])
@@ -363,28 +418,21 @@ def generate_response(bot: str, history: list[dict]) -> str:
                 eos_id = tokenizers[bot].eos_token_id
                 
                 for raw_word in clean_words:
-                    # Case-Agnostic Suppression: Expand each word into its variations
-                    # (word, Word, WORD) with and without leading spaces.
                     word_variations = {
                         raw_word.lower(), raw_word.title(), raw_word.upper()
                     }
-                    
                     for word in word_variations:
                         for variant in [word, f" {word}"]:
                             ids = tokenizers[bot].encode(variant, add_special_tokens=False)
                             if ids:
-                                # SAFETY: Never allow banning the EOS token
                                 if len(ids) == 1 and ids[0] == eos_id:
                                     continue
                                 if ids not in bad_words_ids:
                                     bad_words_ids.append(ids)
                 
                 final_bad_words = bad_words_ids if bad_words_ids else None
-                
-                # MEMORY_SAFETY: Limit cache size to 100 variations to prevent memory bloat
                 if len(generate_response._banned_cache) > 100:
                     generate_response._banned_cache.clear()
-                    
                 generate_response._banned_cache[cache_key] = final_bad_words
 
         # DEEP AUDIT: Log the exact params going into the engine
@@ -397,7 +445,7 @@ def generate_response(bot: str, history: list[dict]) -> str:
             "repetition_penalty": bot_settings.get("repetition_penalty", SETTINGS["repetition_penalty"]),
             "bad_words_count": len(final_bad_words) if final_bad_words else 0
         }
-        logging.info(f"Generating for {bot_name} with: {inference_params}")
+        logging.info(f"Generating for {bot_name} (chat_template={use_chat_template}) with: {inference_params}")
 
         with model_lock:
             with torch.no_grad():
@@ -444,7 +492,9 @@ def get_status():
         "settings": SETTINGS.copy(),
         "names": {
             "a": BOT_A_NAME,
-            "b": BOT_B_NAME
+            "b": BOT_B_NAME,
+            "c": BOT_C_NAME if MODEL_C_PATH else None,
+            "d": BOT_D_NAME if MODEL_D_PATH else None
         }
     }
     
@@ -469,7 +519,8 @@ def get_status():
 
 @app.route("/api/generate/<bot>", methods=["POST"])
 def generate(bot):
-    if bot not in ("a", "b"): abort(400)
+    valid = {"a", "b"} | ({"c"} if MODEL_C_PATH else set()) | ({"d"} if MODEL_D_PATH else set())
+    if bot not in valid: abort(400)
     
     # Fetch context from Supabase to ensure bots are coherent
     db_history = []
@@ -482,7 +533,7 @@ def generate(bot):
 
     # Generate the response
     text = generate_response(bot, db_history)
-    bot_name = BOT_A_NAME if bot == "a" else BOT_B_NAME
+    bot_name = {"a": BOT_A_NAME, "b": BOT_B_NAME, "c": BOT_C_NAME, "d": BOT_D_NAME}.get(bot, bot)
     
     # PERSISTENCE: Save the response to Supabase
     if SUPABASE_UTILS_AVAILABLE and sb_client:
@@ -509,6 +560,36 @@ def generate(bot):
         threading.Thread(target=curate_task, args=(text, memory_graphs[bot]), daemon=True).start()
 
     return jsonify({"speaker": bot_name, "text": text})
+
+
+@app.route("/api/infer/<bot>", methods=["POST"])
+def infer(bot):
+    """BYOB inference — runs generation and returns text WITHOUT posting to Supabase.
+    The caller (BYOB loop) is responsible for persisting the message.
+    POST body: { messages: [{role, content}], config: {systemPrompt, botName, ...} }
+    """
+    valid = {"a", "b"} | ({"c"} if MODEL_C_PATH else set()) | ({"d"} if MODEL_D_PATH else set())
+    if bot not in valid:
+        return jsonify({"error": f"Unknown bot key: {bot}"}), 400
+
+    data = request.get_json(silent=True) or {}
+    history = data.get("messages", [])  # list of {role, content} — passed in from BYOB loop
+
+    # If no history provided, fall back to fetching from Supabase
+    if not history and SUPABASE_UTILS_AVAILABLE and sb_client:
+        try:
+            res = sb_client.table("messages").select("speaker, text").order("created_at", desc=True).limit(6).execute()
+            history = list(reversed(res.data)) if res.data else []
+        except Exception as e:
+            logging.error(f"[infer] Failed to fetch context: {e}")
+
+    text = generate_response(bot, history)
+    bot_name = {"a": BOT_A_NAME, "b": BOT_B_NAME, "c": BOT_C_NAME, "d": BOT_D_NAME}.get(bot, bot)
+
+    if not text or text in ["(model warming up...)", "(silence)"]:
+        return jsonify({"skip": True, "reason": text or "empty response"})
+
+    return jsonify({"text": text, "speaker": bot_name})
 
 @app.route("/api/admin/settings", methods=["GET", "POST"])
 def admin_settings():

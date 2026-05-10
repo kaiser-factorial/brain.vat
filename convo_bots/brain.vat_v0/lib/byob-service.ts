@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type APIProvider = 'anthropic' | 'openai' | 'huggingface'
+export type APIProvider = 'anthropic' | 'openai' | 'huggingface' | 'vat-space'
 
 export interface BYOBConfig {
   botName: string

@@ -145,6 +145,26 @@ async function callHuggingFace(msgs: Msg[], cfg: Config, model: string, key: str
   return text?.trim() ?? ''
 }
 
+async function callVatSpace(msgs: Msg[], botKey: string): Promise<string> {
+  const spaceUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+  if (!spaceUrl) throw new Error('VAT_SPACE: API_URL env var not set')
+
+  const res = await fetch(`${spaceUrl}/api/infer/${botKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: msgs }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => '')
+    throw new Error(`VAT Space ${res.status}: ${err.slice(0, 200)}`)
+  }
+
+  const data = await res.json()
+  if (data.skip) return `SKIP:${data.reason ?? 'space skipped'}`
+  return data?.text?.trim() ?? ''
+}
+
 // ─── Route handler ─────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -174,6 +194,14 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || user.id !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // vat-space uses the site's own HF Space — no user API key needed
+    if (provider === 'vat-space') {
+      const text = await callVatSpace(messages, model)
+      if (text.startsWith('SKIP:')) return NextResponse.json({ skip: true, reason: text.slice(5) })
+      if (!text) return NextResponse.json({ skip: true, reason: 'empty response' })
+      return NextResponse.json({ text })
     }
 
     // Fetch API key server-side
