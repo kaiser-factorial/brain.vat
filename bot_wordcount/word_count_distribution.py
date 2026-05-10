@@ -30,41 +30,6 @@ HDFS_OUT = f"hdfs:///user/{NETID}/bot-wordcount/output"
 
 # ── Same stop words as the main script ────────────────────────────────────────
 STOP_WORDS = {
-    "a", "an", "the",
-    "and", "but", "or", "nor", "for", "yet", "so",
-    "although", "because", "since", "while", "though",
-    "of", "in", "to", "for", "with", "on", "at", "from", "by",
-    "about", "as", "into", "through", "during", "before", "after",
-    "above", "below", "between", "out", "off", "over", "under",
-    "again", "then", "once", "here", "there", "up", "down",
-    "i", "me", "my", "myself", "we", "our", "ours", "ourselves",
-    "you", "your", "yours", "yourself", "yourselves",
-    "he", "him", "his", "himself", "she", "her", "hers", "herself",
-    "it", "its", "itself", "they", "them", "their", "theirs", "themselves",
-    "what", "which", "who", "whom", "this", "that", "these", "those",
-    "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "having",
-    "do", "does", "did", "doing",
-    "will", "would", "shall", "should",
-    "may", "might", "must", "can", "could",
-    "am", "get", "got", "let", "put", "say", "said",
-    "not", "no", "never", "neither", "nor",
-    "dont", "doesnt", "didnt", "cant", "wont", "wouldnt", "shouldnt",
-    "isnt", "arent", "wasnt", "werent", "havent", "hasnt", "hadnt",
-    "im", "ive", "id", "ill", "youre", "youve", "youd", "youll",
-    "hes", "shes", "its", "weve", "wed", "well", "theyre", "theyve",
-    "thats", "theres",
-    "ok", "okay", "yeah", "yes", "yep", "nope", "oh", "ah", "um",
-    "uh", "like", "just", "also", "even", "still", "already", "now",
-    "really", "actually", "basically", "literally", "well", "so",
-    "too", "very", "quite", "rather", "pretty", "much", "more",
-    "most", "some", "any", "all", "both", "each", "few", "many",
-    "other", "same", "such", "than", "then", "when", "where", "why",
-    "how", "if", "only", "own", "new", "first", "last", "long",
-    "great", "little", "right", "make", "look", "know", "think",
-    "go", "come", "see", "use", "find", "give", "tell", "feel",
-    "try", "ask", "seem", "leave", "call", "keep", "need", "want",
-    "mean", "become", "show", "take", "help", "start",
     "", "s", "t", "re", "ve", "ll", "d",
 }
 
@@ -78,11 +43,11 @@ def tokenize(line: str) -> list:
 
 def run_bot(sc, spark, bot_name: str):
     input_path   = f"{HDFS_IN}/{bot_name.lower()}_messages.txt"
-    vocab_out    = f"{HDFS_OUT}/{bot_name}_full_vocab"
-    dist_out     = f"{HDFS_OUT}/{bot_name}_distribution"
+    vocab_out    = f"{HDFS_OUT}/{bot_name}_full_vocab_NOSTOP"
+    dist_out     = f"{HDFS_OUT}/{bot_name}_distribution_NOSTOP"
 
     print(f"\n{'='*60}")
-    print(f"  {bot_name} — full vocabulary + distribution")
+    print(f"  {bot_name} — full vocabulary + distribution-- no stop words")
     print(f"{'='*60}")
 
     # ── Full word count (no top-N limit) ──────────────────────────────────────
