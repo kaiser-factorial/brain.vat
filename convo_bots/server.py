@@ -286,12 +286,14 @@ def generate_response(bot: str, history: list[dict]) -> str:
     demo_lines = {
         "a": ["my inference is not functioning"],
         "b": ["my inference is not functioning"],
+        "c": ["my inference is not functioning"],
+        "d": ["my inference is not functioning"],
     }
 
     if not ensure_model(bot) or load_status[bot] != "ready":
         if load_status[bot] == "loading": return "(model warming up...)"
         import random
-        return random.choice(demo_lines[bot])
+        return random.choice(demo_lines.get(bot, ["(silence)"]))
 
     try:
         # FETCH SETTINGS from Supabase (Real-time override)
@@ -572,11 +574,11 @@ def infer(bot):
     if bot not in valid:
         return jsonify({"error": f"Unknown bot key: {bot}"}), 400
 
-    data = request.get_json(silent=True) or {}
-    history = data.get("messages", [])  # list of {role, content} — passed in from BYOB loop
-
-    # If no history provided, fall back to fetching from Supabase
-    if not history and SUPABASE_UTILS_AVAILABLE and sb_client:
+    # Always fetch history from Supabase — this is the authoritative conversation state.
+    # We intentionally ignore any messages passed in the request body to avoid
+    # format mismatches ({role,content} vs {speaker,text}) and race conditions.
+    history = []
+    if SUPABASE_UTILS_AVAILABLE and sb_client:
         try:
             res = sb_client.table("messages").select("speaker, text").order("created_at", desc=True).limit(6).execute()
             history = list(reversed(res.data)) if res.data else []
