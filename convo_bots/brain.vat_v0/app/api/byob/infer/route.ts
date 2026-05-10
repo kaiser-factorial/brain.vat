@@ -83,7 +83,13 @@ async function callHuggingFace(msgs: Msg[], cfg: Config, model: string, key: str
   if (msgs.length === 0) return 'SKIP:empty message feed'
   const hfHeaders = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
 
-  // Stage 1: chat completions
+  // Strip HTML from error bodies so the modal shows something readable
+  const readErr = async (res: Response) => {
+    const t = await res.text().catch(() => '')
+    return t.startsWith('<') ? `HTTP ${res.status} (model not accessible via Inference API)` : t.slice(0, 300)
+  }
+
+  // Stage 1: chat completions (instruction-tuned / chat models)
   const chatRes = await fetch(
     `https://api-inference.huggingface.co/models/${model}/v1/chat/completions`,
     {
@@ -102,8 +108,15 @@ async function callHuggingFace(msgs: Msg[], cfg: Config, model: string, key: str
     return data?.choices?.[0]?.message?.content?.trim() ?? ''
   }
   if (chatRes.status === 503) return 'SKIP:HuggingFace model loading'
+  if (chatRes.status === 429) return 'SKIP:HuggingFace rate limit'
+  if (chatRes.status === 401) throw new Error('HuggingFace: invalid API key — check your key in the BYOB panel')
 
-  // Stage 2: text generation fallback
+  // Only fall through to Stage 2 if chat completions endpoint doesn't exist for this model
+  if (chatRes.status !== 404 && chatRes.status !== 400) {
+    throw new Error(`HuggingFace Stage 1 error: ${await readErr(chatRes)}`)
+  }
+
+  // Stage 2: text generation fallback (base models)
   const historyText = msgs.map((m) => m.content).join('\n')
   const prompt = cfg.systemPrompt
     ? `${cfg.systemPrompt}\n\n${historyText}\n${cfg.botName}:`
@@ -119,7 +132,13 @@ async function callHuggingFace(msgs: Msg[], cfg: Config, model: string, key: str
   })
   if (!genRes.ok) {
     if (genRes.status === 503) return 'SKIP:HuggingFace model loading'
-    throw new Error(`HuggingFace ${genRes.status}: ${await genRes.text()}`)
+    if (genRes.status === 401) throw new Error('HuggingFace: invalid API key — check your key in the BYOB panel')
+    if (genRes.status === 404) throw new Error(
+      `HuggingFace: "${model}" is not available on the Inference API. ` +
+      'The model may be private, not deployed to the Inference API, or the model ID may be wrong. ' +
+      'Check the model page on huggingface.co to confirm Inference API access.'
+    )
+    throw new Error(`HuggingFace error: ${await readErr(genRes)}`)
   }
   const genData = await genRes.json()
   const text = Array.isArray(genData) ? genData[0]?.generated_text : genData?.generated_text
