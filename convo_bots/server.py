@@ -201,13 +201,26 @@ def ensure_model(bot: str):
     try:
         logging.info(f"[{bot}] Initializing models and tokenizer from: {path}")
         # IMPORTANT: We load the model-specific tokenizer to support custom <think> tokens!
-        tokenizers[bot] = AutoTokenizer.from_pretrained(path)
-        
+        def _hf_load(p, force=False):
+            kw = dict(trust_remote_code=True, force_download=force)
+            tok = AutoTokenizer.from_pretrained(p, **kw)
+            mdl = AutoModelForCausalLM.from_pretrained(p, **kw)
+            return tok, mdl
+
+        try:
+            tokenizers[bot], _mdl = _hf_load(path)
+        except Exception as _cache_err:
+            if any(k in str(_cache_err) for k in ("ModelWrapper", "untagged enum", "safetensor", "HeaderToo")):
+                logging.warning(f"[{bot}] Corrupt cache detected — forcing re-download from {path}")
+                tokenizers[bot], _mdl = _hf_load(path, force=True)
+            else:
+                raise
+
         # Ensure special tokens are recognized
         if "<think>" not in tokenizers[bot].get_vocab():
             tokenizers[bot].add_special_tokens({"additional_special_tokens": ["<think>", "</think>"]})
-            
-        models[bot] = AutoModelForCausalLM.from_pretrained(path).to(DEVICE)
+
+        models[bot] = _mdl.to(DEVICE)
         
         # Sync model version to Supabase if available
         if SUPABASE_UTILS_AVAILABLE and sb_client:
