@@ -172,8 +172,13 @@ export function BYOBModal() {
 
   const handleProviderChange = (p: APIProvider) => {
     setProvider(p)
-    setModel(DEFAULT_MODELS[p])
+    const m = DEFAULT_MODELS[p]
+    setModel(m)
     setApiKey('')
+    if (p === 'vat-space') {
+      const b = VAT_SPACE_BOTS.find(x => x.key === m)
+      if (b) setName(b.label)
+    }
   }
 
   const handleSaveKey = async () => {
@@ -378,7 +383,12 @@ export function BYOBModal() {
                   {provider === 'vat-space' ? (
                     <select
                       value={model}
-                      onChange={(e) => setModel(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setModel(val)
+                        const b = VAT_SPACE_BOTS.find(x => x.key === val)
+                        if (b) setName(b.label)
+                      }}
                       disabled={isActive}
                       className="w-full bg-background border border-border rounded-sm px-2 py-1.5 text-sm font-mono text-foreground focus:outline-none focus:border-primary disabled:opacity-50"
                     >

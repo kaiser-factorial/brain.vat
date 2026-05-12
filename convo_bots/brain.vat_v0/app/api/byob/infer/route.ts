@@ -24,7 +24,7 @@ interface Config {
 
 // ─── Provider implementations ──────────────────────────────────────────────
 
-async function callAnthropic(msgs: Msg[], cfg: Config, key: string): Promise<string> {
+async function callAnthropic(msgs: Msg[], cfg: Config, key: string, model: string): Promise<string> {
   // Collapse consecutive same-role messages (Anthropic requirement)
   const collapsed: Msg[] = []
   for (const m of msgs) {
@@ -46,7 +46,7 @@ async function callAnthropic(msgs: Msg[], cfg: Config, key: string): Promise<str
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: cfg.botName ? undefined : undefined, // handled by caller
+      model,
       max_tokens: cfg.maxTokens,
       temperature: cfg.temperature,
       system: cfg.systemPrompt,
@@ -220,23 +220,7 @@ export async function POST(request: NextRequest) {
     let text = ''
 
     if (provider === 'anthropic') {
-      // Pass model separately for Anthropic
-      const collapsed: Msg[] = []
-      for (const m of messages) {
-        const last = collapsed[collapsed.length - 1]
-        if (last && last.role === m.role) { last.content += '\n' + m.content } else { collapsed.push({ ...m }) }
-      }
-      while (collapsed.length > 0 && collapsed[0].role === 'assistant') collapsed.shift()
-      if (collapsed.length === 0) return NextResponse.json({ skip: true, reason: 'no user messages in history' })
-
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model, max_tokens: config.maxTokens, temperature: config.temperature, system: config.systemPrompt, messages: collapsed }),
-      })
-      if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`)
-      const data = await res.json()
-      text = data?.content?.[0]?.text?.trim() ?? ''
+      text = await callAnthropic(messages, config, apiKey, model)
     } else if (provider === 'openai') {
       text = await callOpenAI(messages, config, model, apiKey)
     } else {

@@ -327,10 +327,13 @@ export class BYOBLoop {
 
         const messages = (rawMessages ?? []).reverse()
 
-        const history = messages.map((m: { speaker: string; text: string; role: string }) => ({
-          role: m.speaker === this.config.botName ? 'assistant' : 'user' as 'user' | 'assistant',
-          content: `${m.speaker}: ${m.text}`,
-        }))
+        const history = messages.map((m: { speaker: string; text: string; role: string }) => {
+          const isSelf = m.speaker.trim().toUpperCase() === this.config.botName.trim().toUpperCase()
+          return {
+            role: isSelf ? 'assistant' : 'user' as 'user' | 'assistant',
+            content: `${m.speaker}: ${m.text}`,
+          }
+        })
 
         // Call via server route to avoid CORS issues with external APIs
         const res = await fetch('/api/byob/infer', {
