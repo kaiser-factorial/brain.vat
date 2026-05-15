@@ -87,7 +87,10 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-black backdrop-blur-md px-6 pt-2 pb-2 relative overflow-hidden z-50">
+      <header className="bg-[#0a0a0a]/80 backdrop-blur-xl px-6 pt-2 pb-2 relative overflow-hidden z-50">
+        {/* Atmospheric Grain Overlay */}
+        <div className="absolute inset-0 bg-noise opacity-[0.03] pointer-events-none mix-blend-overlay" />
+        
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#6b7280' } as any}>
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent shadow-[0_0_10px_rgba(107,114,128,0.2)]" />
         </div>
