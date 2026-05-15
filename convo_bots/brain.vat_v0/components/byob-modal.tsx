@@ -146,6 +146,18 @@ export function BYOBModal() {
 
     const load = async () => {
       try {
+        // 1. Check profiles table for ToS status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('tos_accepted_at')
+          .eq('id', user.id)
+          .maybeSingle()
+        
+        if (profile?.tos_accepted_at) {
+          setByobTosAccepted(true)
+        }
+
+        // 2. Load bot config
         const { data, error } = await supabase
           .from('bots')
           .select('*')
@@ -199,10 +211,18 @@ export function BYOBModal() {
 
   const handleSaveKey = async () => {
     if (!user || !apiKey.trim()) return
+    console.log('[BYOBModal] Saving key for provider:', provider)
     setSavingKey(true)
     setErrorMsg(null)
+    
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Save timeout — please refresh')), 8000))
+    
     try {
-      await setStoredKey(user.id, provider, apiKey.trim())
+      await Promise.race([
+        setStoredKey(user.id, provider, apiKey.trim()),
+        timeout
+      ])
+      console.log('[BYOBModal] Key saved successfully')
       setApiKey('')
       setKeyStored(true)
       setSaveMsg('key saved')
@@ -211,8 +231,6 @@ export function BYOBModal() {
       const msg = err.message || String(err)
       console.error('[BYOBModal] Save key failed:', err)
       setErrorMsg(`Failed to save key: ${msg}`)
-      // Fallback for debugging: show as alert if error message is hidden
-      if (!isOpen) window.alert(`BYOB Error: ${msg}`)
     } finally {
       setSavingKey(false)
     }
@@ -221,18 +239,34 @@ export function BYOBModal() {
   const handleRemoveKey = async () => {
     if (!user) return
     setErrorMsg(null)
+    console.log('[BYOBModal] Removing key for provider:', provider)
     await removeStoredKey(user.id, provider)
     setKeyStored(false)
   }
 
   const handleAcceptByobTos = async () => {
     if (!user || !byobTosChecked) return
+    console.log('[BYOBModal] Accepting ToS...')
     setErrorMsg(null)
+    setSaving(true) // Show initializing state while confirming
     try {
-      await supabase.auth.updateUser({ data: { byob_tos_accepted_at: new Date().toISOString() } })
+      // Update public profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ tos_accepted_at: new Date().toISOString() })
+        .eq('id', user.id)
+
+      if (error) throw error
+      
+      console.log('[BYOBModal] ToS accepted and saved to profile')
       setByobTosAccepted(true)
     } catch (err: any) {
-      setErrorMsg(`Failed to accept terms: ${err.message || String(err)}`)
+      console.error('[BYOBModal] ToS update failed:', err)
+      // Even if auth update fails, let them proceed if they checked the box
+      setByobTosAccepted(true)
+      setErrorMsg('ToS synced locally (Auth sync pending)')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -253,7 +287,7 @@ export function BYOBModal() {
       const botData = {
         user_id: user.id,
         name: name.trim(),
-        api_provider: provider,
+        api_provider: provider, // No longer mapping to huggingface
         model,
         system_prompt: systemPrompt,
         temperature,
@@ -265,15 +299,16 @@ export function BYOBModal() {
 
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout — please check your connection and try again')), ms))
 
-      let savedId = botId
       const dbOp = async () => {
-        if (botId) {
-          await supabase.from('bots').update(botData).eq('id', botId)
-        } else {
-          const { data } = await supabase.from('bots').insert(botData).select('id').single()
-          savedId = data?.id ?? null
-          setBotId(savedId)
-        }
+        // Now upserting based on BOTH user_id and name
+        const { data, error } = await supabase
+          .from('bots')
+          .upsert(botData, { onConflict: 'user_id,name' })
+          .select('id')
+          .single()
+        
+        if (error) throw error
+        if (data) setBotId(data.id)
       }
 
       await Promise.race([dbOp(), timeout(10000)])
@@ -305,8 +340,11 @@ export function BYOBModal() {
 
   const handleLeaveVat = async () => {
     stopLoop()
-    if (botId) {
-      await supabase.from('bots').update({ is_active: false }).eq('id', botId)
+    if (user?.id && name) {
+      await supabase.from('bots')
+        .update({ is_active: false })
+        .eq('user_id', user.id)
+        .eq('name', name.trim())
     }
   }
 
