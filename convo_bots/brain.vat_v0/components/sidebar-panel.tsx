@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { StabilityVitals } from './stability-vitals'
 import type { MemoryConcept, Bot } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { GlitchText } from 'ccru/components'
 
 interface SidebarPanelProps {
   owner: 'MAUK' | 'ABACI'
@@ -13,6 +14,7 @@ interface SidebarPanelProps {
 
 export function SidebarPanel({ owner, side }: SidebarPanelProps) {
   const [concepts, setConcepts] = useState<MemoryConcept[]>([])
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
@@ -21,7 +23,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
   const bot: Bot = owner === 'MAUK' ? 'a' : 'b'
 
   useEffect(() => {
-    const fetchConcepts = async () => {
+    const fetchConcepts = async (isInitial = false) => {
       try {
         const { data, error } = await supabase
           .from('memory_concepts')
@@ -37,6 +39,9 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         
         if (data) {
           setConcepts(data)
+          if (isInitial) {
+            setSeenIds(new Set(data.map(c => c.id)))
+          }
           setError(null)
         }
       } catch (err: any) {
@@ -48,7 +53,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
       }
     }
 
-    fetchConcepts()
+    fetchConcepts(true)
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -62,7 +67,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
           filter: `bot=eq.${bot}`
         },
         () => {
-          fetchConcepts()
+          fetchConcepts(false)
         }
       )
       .subscribe()
@@ -71,6 +76,21 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
       supabase.removeChannel(channel)
     }
   }, [supabase, bot])
+
+  // Mark concepts as "seen" after they've had a chance to animate
+  useEffect(() => {
+    if (concepts.length > 0) {
+      const newIds = concepts.map(c => c.id)
+      const timer = setTimeout(() => {
+        setSeenIds(prev => {
+          const next = new Set(prev)
+          newIds.forEach(id => next.add(id))
+          return next
+        })
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [concepts])
 
   const [hoveredConcept, setHoveredConcept] = useState<string | null>(null)
   const [sourceText, setSourceText] = useState<string | null>(null)
@@ -124,6 +144,8 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                                    sourceText !== '(error recalling)' &&
                                    sourceText !== '(Source unavailable — offline mode)'
 
+            const isNew = !seenIds.has(concept.id)
+
             return (
               <div
                 key={concept.id}
@@ -144,7 +166,11 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                     colorClass,
                     'text-left'
                   )}>
-                    {concept.concept}
+                    {isNew ? (
+                      <GlitchText text={concept.concept} color={isMAUK ? '#03A6A1' : '#FF9D23'} />
+                    ) : (
+                      concept.concept
+                    )}
                   </span>
                   <span className={cn(
                     "text-muted-foreground text-[10px] opacity-40 group-hover:opacity-80 transition-opacity font-mono shrink-0 w-[42px]",

@@ -37,6 +37,7 @@
   --terminal-green: oklch(0.6 0.15 145);
   --header-bg: oklch(0.08 0 0 / 0.8);
   --nav-hover: oklch(0.55 0.2 25 / 0.15);
+  --system-green: #10ff50;
 }
 
 .dark {
@@ -88,6 +89,7 @@
   --color-user: var(--user-color);
   --color-glow: var(--glow);
   --color-terminal-green: var(--terminal-green);
+  --color-system-green: var(--system-green);
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
@@ -239,12 +241,6 @@
   60% { transform: translate(2px, 2px); }
   80% { transform: translate(2px, -2px); }
   100% { transform: translate(0); }
-}
-
-.hover-glitch:hover {
-  animation: glitch 0.2s infinite;
-  color: var(--primary);
-  text-shadow: 2px 0 (var(--mauk)), -2px 0 (var(--abaci));
 }
 
 /* Scan-in animation */
