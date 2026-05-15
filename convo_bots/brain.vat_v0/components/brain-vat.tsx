@@ -17,18 +17,18 @@ export function BrainVat() {
       
       <div className="flex flex-1 min-h-0 relative z-10">
         {/* MAUK sidebar - left */}
-        <aside className="hidden lg:block w-80 bg-card/30 backdrop-blur-sm relative">
+        <aside className="hidden lg:block w-80 min-w-80 flex-shrink-0 bg-card/30 backdrop-blur-sm relative">
           <SidebarPanel owner="MAUK" side="left" />
           <div className="vertical-neon-line right-0 z-10" style={{ '--line-color': '#03A6A1', '--pulse-color': '#03A6A1' } as any} />
         </aside>
 
         {/* Main feed */}
-        <main className="flex-1 bg-background/80 relative">
+        <main className="flex-1 bg-background/80 relative min-w-0">
           <MessageFeed onAuthClick={() => setShowAuthModal(true)} />
         </main>
 
         {/* ABACI sidebar - right */}
-        <aside className="hidden lg:block w-80 bg-card/30 backdrop-blur-sm relative">
+        <aside className="hidden lg:block w-80 min-w-80 flex-shrink-0 bg-card/30 backdrop-blur-sm relative">
           <SidebarPanel owner="ABACI" side="right" />
           <div className="vertical-neon-line left-0 z-10" style={{ '--line-color': '#FF9D23', '--pulse-color': '#FF9D23' } as any} />
         </aside>

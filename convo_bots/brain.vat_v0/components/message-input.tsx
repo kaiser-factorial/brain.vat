@@ -55,14 +55,14 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "authentication required to speak..." : "speak into the void..."}
-          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[48px] max-h-[160px] disabled:cursor-not-allowed pt-1 text-base font-mono leading-[24px]"
+          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[60px] max-h-[160px] disabled:cursor-not-allowed pt-2 text-base font-mono leading-[24px]"
           rows={2}
           disabled={isSending || disabled}
         />
         {disabled ? (
           <button
             onClick={onAuthClick}
-            className="text-user hover:underline transition-colors whitespace-nowrap pt-1 text-sm uppercase tracking-widest"
+            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[60px] flex items-center cursor-pointer"
           >
             [authenticate]
           </button>
@@ -70,9 +70,9 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           <button
             onClick={handleSubmit}
             disabled={!content.trim() || isSending}
-            className="text-terminal-green hover:text-terminal-green/80 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_15px_rgba(16,255,80,1)] active:scale-90 px-2"
+            className="text-terminal-green hover:text-terminal-green/80 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-6 min-w-[140px] min-h-[60px] flex items-center justify-center border-l border-border/20 ml-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            <div className="text-xl font-bold tracking-tighter">
+            <div className="text-3xl font-black tracking-tighter pointer-events-none">
               <GlitchText 
                 text={showSent ? "[SENT]" : "[SEND]"} 
                 color="#10ff50" 
