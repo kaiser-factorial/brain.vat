@@ -59,6 +59,11 @@ function cacheKey(userId: string, provider: APIProvider) {
   return `${userId}:${provider}`
 }
 
+export function clearKeyCache() {
+  keyCache.clear()
+  console.log('[BYOB] Global key cache purged.')
+}
+
 export async function getStoredKey(userId: string, provider: APIProvider): Promise<string | null> {
   const ck = cacheKey(userId, provider)
   if (keyCache.has(ck)) return keyCache.get(ck)!

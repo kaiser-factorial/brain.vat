@@ -12,6 +12,7 @@ import {
   type APIProvider,
   type BYOBConfig,
   type UserBot,
+  clearKeyCache,
 } from '@/lib/byob-service'
 
 const PROVIDERS: APIProvider[] = ['anthropic', 'openai', 'huggingface', 'vat-space']
@@ -135,6 +136,10 @@ export function BYOBModal() {
   const [botId, setBotId]       = useState<string | null>(null)
 
   // Load saved config + BYOB ToS on open
+  useEffect(() => {
+    if (user?.id) clearKeyCache()
+  }, [user?.id])
+
   useEffect(() => {
     if (!user || !isOpen) return
     if (user.user_metadata?.byob_tos_accepted_at) setByobTosAccepted(true)
