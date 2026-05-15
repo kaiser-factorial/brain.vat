@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { BYOBProvider } from '@/lib/byob-context'
 import { SystemStatusProvider } from '@/lib/system-status-context'
@@ -55,6 +56,7 @@ export default function RootLayout({
           </BYOBProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <SpeedInsights />
       </body>
     </html>
   )
