@@ -12,6 +12,7 @@ export function VoiceToggle() {
       onChange={toggleVoice}
       label="Voice Mode"
       accent="#10ff50"
+      className="cursor-pointer"
     />
   )
 }

@@ -69,7 +69,7 @@ function NavLink({ href, children, onClick, active }: { href?: string; children:
       onClick={handleClick}
       active={isCurrent}
       className={cn(
-        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0 transition-colors",
+        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0 transition-colors cursor-pointer",
         "hover:bg-[#10ff50]/10 hover:text-[#10ff50]",
         isCurrent ? "bg-[#10ff50]/20 text-[#10ff50]" : "text-muted-foreground"
       )}
@@ -158,6 +158,7 @@ export function Header({ onAuthClick }: HeaderProps) {
                     onChange={openBYOB}
                     label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
                     accent="#10ff50"
+                    className="cursor-pointer"
                   />
                   <VoiceToggle />
                 </div>
