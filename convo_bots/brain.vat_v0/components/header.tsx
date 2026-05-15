@@ -90,7 +90,7 @@ export function Header({ onAuthClick }: HeaderProps) {
       <header className="bg-[#050505]/90 backdrop-blur-xl px-6 pt-2 pb-2 relative overflow-hidden z-50">
         {/* Atmospheric Grain Overlay */}
         <div className="absolute inset-0 bg-noise opacity-[0.03] pointer-events-none mix-blend-overlay" />
-        
+
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#6b7280' } as any}>
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent shadow-[0_0_10px_rgba(107,114,128,0.2)]" />
         </div>
@@ -138,7 +138,7 @@ export function Header({ onAuthClick }: HeaderProps) {
         </div>
 
         {/* Bottom Section: Status, Description & Operator Toggles */}
-        <div className="flex flex-col items-center mt-0 relative z-10 -translate-y-[10px]">
+        <div className="flex flex-col items-center mt-0 relative z-10 -translate-y-[5px]">
           <div className="-mt-3.5 mb-1.5">
             <SystemStatusIndicator />
           </div>
