@@ -87,23 +87,23 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-header-bg backdrop-blur-md px-6 py-2 relative overflow-hidden noise-overlay z-50">
+      <header className="bg-header-bg backdrop-blur-md px-6 pt-1 pb-1 relative overflow-hidden noise-overlay z-50">
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#E63946' } as any}>
           <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_15px_rgba(230,57,70,0.4)]" />
         </div>
 
-        <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-start justify-between relative z-10">
           {/* Left: Branding & Main Nav */}
           <div className="flex items-center gap-8 flex-1">
             <Link href="/">
-              <h1 className="text-2xl font-black text-primary cursor-pointer branding-pulse tracking-tighter flex items-center gap-2">
-                <span className="bg-primary text-background px-1.5 py-0.5 rounded-sm text-sm">VAT</span>
+              <h1 className="text-xl font-black text-primary cursor-pointer branding-pulse tracking-tighter flex items-center gap-2">
+                <span className="bg-primary text-background px-1 py-0.5 rounded-sm text-xs">VAT</span>
                 brain.vat
               </h1>
             </Link>
 
             <nav className="hidden md:flex items-center">
-              <CyberButtonGroup>
+              <CyberButtonGroup cornerSize={6}>
                 <NavLink href="/about">about</NavLink>
                 <NavLink href="/archive">archive</NavLink>
               </CyberButtonGroup>
@@ -116,52 +116,58 @@ export function Header({ onAuthClick }: HeaderProps) {
             <div className="h-[1px] w-8 bg-border/20 rounded-full mt-0.5" />
           </div>
 
-          {/* Right: User & Utilities */}
+          {/* Right: User Profile (Minimal) */}
           <div className="flex items-center gap-6 flex-1 justify-end">
-            <CyberButtonGroup>
-              {!isLoading && user && (
-                <div className="flex items-center">
-                  {user?.email === 'kaiser.factorial@gmail.com' && (
-                    <NavLink href="/admin">control</NavLink>
-                  )}
-                </div>
-              )}
-
-              {!isLoading && !user && (
-                <div className="flex items-center">
-                  <NavLink onClick={onAuthClick}>authenticate</NavLink>
-                </div>
-              )}
-            </CyberButtonGroup>
+            {!isLoading && !user && (
+              <CyberButtonGroup cornerSize={6}>
+                <NavLink onClick={onAuthClick}>authenticate</NavLink>
+              </CyberButtonGroup>
+            )}
 
             {user && (
-              <div className="flex flex-col items-end border-l border-border/30 pl-6 gap-2">
-                <div className="flex flex-col items-end group">
-                  <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
+              <div className="flex items-center gap-4">
+                {user?.email === 'kaiser.factorial@gmail.com' && (
+                  <CyberButtonGroup cornerSize={6}>
+                    <NavLink href="/admin">control</NavLink>
+                  </CyberButtonGroup>
+                )}
+                <div className="flex flex-col items-end border-l border-border/20 pl-4 group">
+                  <span className="text-[11px] font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
                     {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
                   </span>
-                  <span className="text-[8px] text-muted-foreground opacity-40 font-mono text-right uppercase tracking-widest group-hover:opacity-100 transition-opacity">
+                  <span className="text-[7px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
                     Active Session
                   </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <CyberCheckbox
-                    checked={byobActive}
-                    onChange={openBYOB}
-                    label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
-                    accent="#10ff50"
-                  />
-                  <VoiceToggle />
                 </div>
               </div>
             )}
           </div>
         </div>
-        <div className="flex items-center justify-center">
-          <p className="text-[10px] text-muted-foreground/60 text-center font-mono uppercase tracking-[0.2em]">
-            a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
-          </p>
+
+        {/* Bottom Row: Bot Description & Operator Toggles */}
+        <div className="flex items-center justify-between relative z-10 -mt-1">
+          {/* Left spacer to keep description centered */}
+          <div className="flex-1 hidden md:block" />
+
+          <div className="flex-1 flex justify-center">
+            <p className="text-[10px] text-muted-foreground/40 text-center font-mono uppercase tracking-[0.2em] whitespace-nowrap">
+              a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
+            </p>
+          </div>
+
+          <div className="flex-1 flex justify-end">
+            {user && (
+              <div className="flex items-center gap-3 scale-90 origin-right">
+                <CyberCheckbox
+                  checked={byobActive}
+                  onChange={openBYOB}
+                  label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
+                  accent="#10ff50"
+                />
+                <VoiceToggle />
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -169,6 +175,3 @@ export function Header({ onAuthClick }: HeaderProps) {
     </>
   )
 }
-
-
-
