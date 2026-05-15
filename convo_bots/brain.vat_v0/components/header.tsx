@@ -69,7 +69,7 @@ function NavLink({ href, children, onClick, active }: { href?: string; children:
       onClick={handleClick}
       active={isCurrent}
       className={cn(
-        "font-mono px-4 border-r-2 border-[#10ff50]/20 last:border-r-0 transition-colors",
+        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0 transition-colors",
         "hover:bg-[#10ff50]/10 hover:text-[#10ff50]",
         isCurrent ? "bg-[#10ff50]/20 text-[#10ff50]" : "text-muted-foreground"
       )}
@@ -123,7 +123,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
             {user && (
               <div className="flex flex-col items-end border-l border-border/20 pl-4 group">
-                <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.5)]">
+                <span className="text-sm font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.5)]">
                   {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
                 </span>
                 <span className="text-[8px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
