@@ -87,7 +87,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-header-bg backdrop-blur-md px-6 py-4 relative overflow-hidden noise-overlay z-50">
+      <header className="bg-header-bg backdrop-blur-md px-6 py-2 relative overflow-hidden noise-overlay z-50">
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#E63946' } as any}>
           <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_15px_rgba(230,57,70,0.4)]" />
         </div>
@@ -111,9 +111,9 @@ export function Header({ onAuthClick }: HeaderProps) {
           </div>
 
           {/* Center: System Status */}
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="flex flex-col items-center">
             <SystemStatusIndicator />
-            <div className="h-[2px] w-12 bg-border/30 rounded-full" />
+            <div className="h-[1px] w-8 bg-border/20 rounded-full mt-0.5" />
           </div>
 
           {/* Right: User & Utilities */}
@@ -145,7 +145,7 @@ export function Header({ onAuthClick }: HeaderProps) {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-3">
                   <CyberCheckbox
                     checked={byobActive}
                     onChange={openBYOB}
@@ -158,7 +158,7 @@ export function Header({ onAuthClick }: HeaderProps) {
             )}
           </div>
         </div>
-        <div className="flex items-center justify-center mt-1">
+        <div className="flex items-center justify-center">
           <p className="text-[10px] text-muted-foreground/60 text-center font-mono uppercase tracking-[0.2em]">
             a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
           </p>
