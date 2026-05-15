@@ -51,7 +51,7 @@ interface HeaderProps {
   onAuthClick?: () => void
 }
 
-function NavLink({ href, children, onClick, active }: { href?: string; children: React.ReactNode; onClick?: () => void; active?: boolean }) {
+function NavLink({ href, children, onClick, active, shortcut }: { href?: string; children: React.ReactNode; onClick?: () => void; active?: boolean; shortcut?: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const isCurrent = active || (href && pathname === href)
@@ -68,7 +68,11 @@ function NavLink({ href, children, onClick, active }: { href?: string; children:
     <CyberButton 
       onClick={handleClick} 
       active={isCurrent}
-      className="font-mono"
+      shortcut={shortcut}
+      className={cn(
+        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0",
+        isCurrent ? "bg-[#10ff50]/20 text-[#10ff50]" : "text-muted-foreground"
+      )}
       size="sm"
     >
       {children}
@@ -100,10 +104,10 @@ export function Header({ onAuthClick }: HeaderProps) {
             
             <nav className="hidden md:flex items-center">
               <CyberButtonGroup>
-                <NavLink href="/about">about</NavLink>
-                <NavLink href="/archive">archive</NavLink>
+                <NavLink href="/about" shortcut="a">about</NavLink>
+                <NavLink href="/archive" shortcut="r">archive</NavLink>
                 {user && (
-                  <NavLink onClick={openBYOB} active={byobActive}>
+                  <NavLink onClick={openBYOB} active={byobActive} shortcut="b">
                     {byobActive ? byobBotName : 'byob'}
                   </NavLink>
                 )}
@@ -123,10 +127,7 @@ export function Header({ onAuthClick }: HeaderProps) {
               {!isLoading && user && (
                 <div className="flex items-center">
                   {user?.email === 'kaiser.factorial@gmail.com' && (
-                    <>
-                      <NavLink href="/admin">control</NavLink>
-                      <NavLink href="/admin/audit">audit</NavLink>
-                    </>
+                    <NavLink href="/admin" shortcut="c">control</NavLink>
                   )}
                 </div>
               )}
@@ -134,16 +135,11 @@ export function Header({ onAuthClick }: HeaderProps) {
               {!isLoading && (
                 <div className="flex items-center">
                   {user ? (
-                    <NavLink
-                      onClick={async () => {
-                        await signOut()
-                        window.location.href = '/'
-                      }}
-                    >
-                      exit
-                    </NavLink>
+                    <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-terminal-green/50 font-mono">
+                      [VAT_PERSISTENCE_ACTIVE]
+                    </div>
                   ) : (
-                    <NavLink onClick={onAuthClick}>authenticate</NavLink>
+                    <NavLink onClick={onAuthClick} shortcut="l">authenticate</NavLink>
                   )}
                 </div>
               )}

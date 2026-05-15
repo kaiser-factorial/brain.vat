@@ -156,12 +156,20 @@ export default function AuditDashboard() {
             <span className="animate-pulse text-[#00ff41]">{glitchText}</span>
           </div>
         </div>
-        <button
-          onClick={() => router.push('/')}
-          className="text-[10px] uppercase tracking-widest border border-[#00ff41] px-4 py-2 hover:bg-[#00ff41] hover:text-black transition-all duration-300 font-bold"
-        >
-          &lt; EXIT_SESSION
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => router.push('/admin')}
+            className="text-[10px] uppercase tracking-widest border border-[#00ff41] px-4 py-2 hover:bg-[#00ff41] hover:text-black transition-all duration-300 font-bold"
+          >
+            &lt; CONTROL_PANEL
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            className="text-[10px] uppercase tracking-widest border border-[#00ff41] px-4 py-2 hover:bg-[#00ff41] hover:text-black transition-all duration-300 font-bold"
+          >
+            EXIT_SESSION
+          </button>
+        </div>
       </div>
 
       {/* Secure Access Prompt fallback */}
