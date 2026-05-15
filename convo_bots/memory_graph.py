@@ -57,7 +57,7 @@ def _supabase():
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 DECAY_RATE   = 0.97     # weight multiplied by this each update cycle
-MAX_CONCEPTS = 150      # prune lowest-weight concepts beyond this cap
+MAX_CONCEPTS = 250      # prune lowest-weight concepts beyond this cap
 MIN_WEIGHT   = 0.05     # concepts below this are removed during pruning
 MIN_WORD_LEN = 4        # minimum character length for a concept word
 
@@ -210,7 +210,7 @@ class MemoryGraph:
             
         return added
 
-    def obsessions(self, n: int = 10) -> list[str]:
+    def obsessions(self, n: int = 17) -> list[str]:
         """Return the n highest-weight concepts."""
         sorted_c = sorted(self._concepts.items(), key=lambda x: x[1], reverse=True)
         return [c for c, _ in sorted_c[:n]]
@@ -264,7 +264,7 @@ class MemoryGraph:
         try:
             import torch
             # Using a more "intellectual" lead-in to nudge away from slop
-            prompt = f"[{self.bot_name}]: {generated_text.strip()}\nThe unseen concept here is:"
+            prompt = f"[{self.bot_name}]: {generated_text.strip()}\nThis reminds me of:"
             inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
             with torch.no_grad():
@@ -272,8 +272,8 @@ class MemoryGraph:
                     **inputs,
                     max_new_tokens=max_new_tokens,
                     do_sample=True,
-                    temperature=0.8,
-                    top_p=0.9,
+                    temperature=0.6,
+                    top_p=0.97,
                     pad_token_id=self.tokenizer.eos_token_id,
                 )
 
@@ -424,7 +424,7 @@ if __name__ == "__main__":
     print("Related to 'moon':", mg.related_to("moon"))
 
     # Simulate a few decay cycles
-    for _ in range(10):
+    for _ in range(17):
         mg._decay_all()
     mg._prune()
     print(f"\nAfter 10 decay cycles: {len(mg._concepts)} concepts remain")
