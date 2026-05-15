@@ -9,7 +9,8 @@ import { StabilityVitals } from './stability-vitals'
 import { useSystemStatus } from '@/lib/system-status-context'
 import { VoiceToggle } from './voice-toggle'
 import { cn } from '@/lib/utils'
-import { NeonDivider } from 'ccru/components'
+import { NeonDivider, CyberButton, CyberButtonGroup } from 'ccru/components'
+import { useRouter, usePathname } from 'next/navigation'
 
 function SystemStatusIndicator() {
   const { isOnline, isLoopActive } = useSystemStatus()
@@ -51,26 +52,27 @@ interface HeaderProps {
 }
 
 function NavLink({ href, children, onClick, active }: { href?: string; children: React.ReactNode; onClick?: () => void; active?: boolean }) {
-  const content = (
-    <span className={cn(
-      "text-[10px] font-mono tracking-widest uppercase transition-all duration-300 px-2 py-1 rounded relative group",
-      active ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-primary/5",
-      "cursor-pointer"
-    )}>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity absolute -left-1">[</span>
-      <span className="group-hover:hover-glitch">{children}</span>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity absolute -right-1">]</span>
-    </span>
-  )
+  const router = useRouter()
+  const pathname = usePathname()
+  const isCurrent = active || (href && pathname === href)
 
-  if (onClick) {
-    return <button onClick={onClick} className="outline-none">{content}</button>
+  const handleClick = () => {
+    if (onClick) {
+      onClick()
+    } else if (href) {
+      router.push(href)
+    }
   }
 
   return (
-    <Link href={href || '#'}>
-      {content}
-    </Link>
+    <CyberButton 
+      onClick={handleClick} 
+      active={isCurrent}
+      className="font-mono"
+      size="sm"
+    >
+      {children}
+    </CyberButton>
   )
 }
 
@@ -83,7 +85,7 @@ export function Header({ onAuthClick }: HeaderProps) {
     <>
       <header className="bg-header-bg backdrop-blur-md px-6 py-4 relative overflow-hidden noise-overlay z-50">
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#E63946' } as any}>
-          <NeonDivider color="#E63946" />
+          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_15px_rgba(230,57,70,0.4)]" />
         </div>
         
         <div className="flex items-center justify-between relative z-10">
@@ -96,14 +98,16 @@ export function Header({ onAuthClick }: HeaderProps) {
               </h1>
             </Link>
             
-            <nav className="hidden md:flex items-center gap-1">
-              <NavLink href="/about">about</NavLink>
-              <NavLink href="/archive">archive</NavLink>
-              {user && (
-                <NavLink onClick={openBYOB} active={byobActive}>
-                  {byobActive ? byobBotName : 'byob'}
-                </NavLink>
-              )}
+            <nav className="hidden md:flex items-center">
+              <CyberButtonGroup>
+                <NavLink href="/about">about</NavLink>
+                <NavLink href="/archive">archive</NavLink>
+                {user && (
+                  <NavLink onClick={openBYOB} active={byobActive}>
+                    {byobActive ? byobBotName : 'byob'}
+                  </NavLink>
+                )}
+              </CyberButtonGroup>
             </nav>
           </div>
 
@@ -115,28 +119,21 @@ export function Header({ onAuthClick }: HeaderProps) {
 
           {/* Right: User & Utilities */}
           <div className="flex items-center gap-6 flex-1 justify-end">
-            {!isLoading && user && (
-              <div className="flex items-center gap-4 border-r border-border/30 pr-6">
-                {/* <NavLink onClick={() => setShowFiles(true)}>files</NavLink> */}
-                {user?.email === 'kaiser.factorial@gmail.com' && (
-                  <>
-                    <NavLink href="/admin">control</NavLink>
-                    <NavLink href="/admin/audit">audit</NavLink>
-                  </>
-                )}
-              </div>
-            )}
+            <CyberButtonGroup>
+              {!isLoading && user && (
+                <div className="flex items-center">
+                  {user?.email === 'kaiser.factorial@gmail.com' && (
+                    <>
+                      <NavLink href="/admin">control</NavLink>
+                      <NavLink href="/admin/audit">audit</NavLink>
+                    </>
+                  )}
+                </div>
+              )}
 
-            {!isLoading && (
-              <div className="flex items-center gap-4">
-                {user ? (
-                  <>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-bold text-terminal-green tracking-widest font-mono">
-                        {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
-                      </span>
-                      <span className="text-[8px] text-muted-foreground opacity-50 font-mono">SESSION: ACTIVE</span>
-                    </div>
+              {!isLoading && (
+                <div className="flex items-center">
+                  {user ? (
                     <NavLink
                       onClick={async () => {
                         await signOut()
@@ -145,10 +142,19 @@ export function Header({ onAuthClick }: HeaderProps) {
                     >
                       exit
                     </NavLink>
-                  </>
-                ) : (
-                  <NavLink onClick={onAuthClick}>authenticate</NavLink>
-                )}
+                  ) : (
+                    <NavLink onClick={onAuthClick}>authenticate</NavLink>
+                  )}
+                </div>
+              )}
+            </CyberButtonGroup>
+
+            {user && (
+              <div className="flex flex-col items-end border-l border-border/30 pl-6">
+                <span className="text-[10px] font-bold text-terminal-green tracking-widest font-mono">
+                  {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
+                </span>
+                <span className="text-[8px] text-muted-foreground opacity-50 font-mono text-right">SESSION: ACTIVE</span>
               </div>
             )}
           </div>
@@ -165,3 +171,4 @@ export function Header({ onAuthClick }: HeaderProps) {
     </>
   )
 }
+
