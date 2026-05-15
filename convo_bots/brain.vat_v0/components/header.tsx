@@ -14,7 +14,7 @@ import { useRouter, usePathname } from 'next/navigation'
 
 function SystemStatusIndicator() {
   const { isOnline, isLoopActive } = useSystemStatus()
-  
+
   if (!isOnline) {
     return (
       <div className="flex items-center gap-2 group cursor-default">
@@ -36,7 +36,7 @@ function SystemStatusIndicator() {
       </div>
     )
   }
-  
+
   return (
     <div className="flex items-center gap-2 group cursor-default">
       <div className="w-1.5 h-1.5 rounded-full bg-terminal-green animate-pulse" />
@@ -65,15 +65,15 @@ function NavLink({ href, children, onClick, active }: { href?: string; children:
   }
 
   return (
-    <CyberButton 
-      onClick={handleClick} 
+    <CyberButton
+      onClick={handleClick}
       active={isCurrent}
       className={cn(
         "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0 transition-colors",
         "hover:bg-[#10ff50]/10 hover:text-[#10ff50]",
         isCurrent ? "bg-[#10ff50]/20 text-[#10ff50]" : "text-muted-foreground"
       )}
-      size="sm"
+      size="md"
     >
       {children}
     </CyberButton>
@@ -91,7 +91,7 @@ export function Header({ onAuthClick }: HeaderProps) {
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#E63946' } as any}>
           <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_15px_rgba(230,57,70,0.4)]" />
         </div>
-        
+
         <div className="flex items-center justify-between relative z-10">
           {/* Left: Branding & Main Nav */}
           <div className="flex items-center gap-8 flex-1">
@@ -101,16 +101,11 @@ export function Header({ onAuthClick }: HeaderProps) {
                 brain.vat
               </h1>
             </Link>
-            
+
             <nav className="hidden md:flex items-center">
               <CyberButtonGroup>
                 <NavLink href="/about">about</NavLink>
                 <NavLink href="/archive">archive</NavLink>
-                {user && (
-                  <NavLink onClick={openBYOB} active={byobActive}>
-                    {byobActive ? byobBotName : 'byob'}
-                  </NavLink>
-                )}
               </CyberButtonGroup>
             </nav>
           </div>
@@ -140,22 +135,33 @@ export function Header({ onAuthClick }: HeaderProps) {
             </CyberButtonGroup>
 
             {user && (
-              <div className="flex flex-col items-end border-l border-border/30 pl-6 group">
-                <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
-                  {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
-                </span>
-                <span className="text-[8px] text-muted-foreground opacity-40 font-mono text-right uppercase tracking-widest group-hover:opacity-100 transition-opacity">
-                  Active Session
-                </span>
+              <div className="flex flex-col items-end border-l border-border/30 pl-6 gap-2">
+                <div className="flex flex-col items-end group">
+                  <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
+                    {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground opacity-40 font-mono text-right uppercase tracking-widest group-hover:opacity-100 transition-opacity">
+                    Active Session
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 mt-1">
+                  <CyberCheckbox
+                    checked={byobActive}
+                    onChange={openBYOB}
+                    label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
+                    accent="#10ff50"
+                  />
+                  <VoiceToggle />
+                </div>
               </div>
             )}
           </div>
         </div>
-        <div className="flex items-center justify-center gap-4 mt-1">
+        <div className="flex items-center justify-center mt-1">
           <p className="text-[10px] text-muted-foreground/60 text-center font-mono uppercase tracking-[0.2em]">
             a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
           </p>
-          <VoiceToggle />
         </div>
       </header>
 
@@ -163,5 +169,6 @@ export function Header({ onAuthClick }: HeaderProps) {
     </>
   )
 }
+
 
 
