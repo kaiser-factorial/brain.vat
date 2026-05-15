@@ -155,12 +155,12 @@ export function Header({ onAuthClick }: HeaderProps) {
 
             <div className="flex-1 flex justify-end">
               {user && (
-                <div className="flex items-center gap-3 scale-90 origin-right">
+                <div className="flex items-center gap-3 scale-110 origin-right">
                   <CyberCheckbox
                     checked={byobActive}
                     onChange={openBYOB}
                     label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
-                    accent="#10ff50"
+                    accent="#ff003c"
                     className="cursor-pointer"
                   />
                   <VoiceToggle />
