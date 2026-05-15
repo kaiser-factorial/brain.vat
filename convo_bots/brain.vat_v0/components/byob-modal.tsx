@@ -250,8 +250,14 @@ export function BYOBModal() {
       }
       startLoop(config, user.id)
       minimizeModal() // auto-minimize once running
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err))
+    } catch (err: any) {
+      const msg = err?.message || String(err)
+      if (msg.includes('Lock was stolen')) {
+        setErrorMsg('Session conflict detected. Please refresh the page or close other Vat tabs.')
+      } else {
+        setErrorMsg(msg)
+      }
+      console.error('[BYOBModal] Initialization error:', err)
     } finally {
       setSaving(false)
     }

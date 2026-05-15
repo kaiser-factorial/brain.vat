@@ -46,6 +46,11 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         }
       } catch (err: any) {
         const msg = err?.message || JSON.stringify(err)
+        // Suppress "Lock was stolen" errors which are harmless background tab sync events
+        if (msg.includes('Lock was stolen') || msg.includes('AbortError')) {
+          console.warn(`[Sidebar] Background lock handoff for ${owner}: Lock stolen (harmless).`)
+          return
+        }
         console.error(`[Sidebar] Failed for ${owner} (${bot}):`, msg)
         setError(msg)
       } finally {
