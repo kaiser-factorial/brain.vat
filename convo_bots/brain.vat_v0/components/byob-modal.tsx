@@ -203,7 +203,11 @@ export function BYOBModal() {
       setSaveMsg('key saved')
       setTimeout(() => setSaveMsg(null), 3000)
     } catch (err: any) {
-      setErrorMsg(`Failed to save key: ${err.message || String(err)}`)
+      const msg = err.message || String(err)
+      console.error('[BYOBModal] Save key failed:', err)
+      setErrorMsg(`Failed to save key: ${msg}`)
+      // Fallback for debugging: show as alert if error message is hidden
+      if (!isOpen) window.alert(`BYOB Error: ${msg}`)
     } finally {
       setSavingKey(false)
     }
