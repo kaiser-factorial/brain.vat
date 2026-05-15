@@ -11,29 +11,29 @@ export function BrainVat() {
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   return (
-    <div className="relative h-screen flex flex-col overflow-hidden noise">
+    <div className="relative h-screen flex flex-col overflow-hidden noise-overlay">
       <ServerStatusOverlay />
       <Header onAuthClick={() => setShowAuthModal(true)} />
       
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative z-10">
         {/* MAUK sidebar - left */}
-        <aside className="hidden lg:block w-64 bg-card/50">
+        <aside className="hidden lg:block w-72 bg-card/30 border-r border-border/50 backdrop-blur-sm">
           <SidebarPanel owner="MAUK" side="left" />
         </aside>
 
         {/* Main feed */}
-        <main className="flex-1 bg-background border-x border-border">
+        <main className="flex-1 bg-background/80 relative">
           <MessageFeed onAuthClick={() => setShowAuthModal(true)} />
         </main>
 
         {/* ABACI sidebar - right */}
-        <aside className="hidden lg:block w-64 bg-card/50">
+        <aside className="hidden lg:block w-72 bg-card/30 border-l border-border/50 backdrop-blur-sm">
           <SidebarPanel owner="ABACI" side="right" />
         </aside>
       </div>
 
       {/* Subtle scanlines overlay */}
-      <div className="scanlines pointer-events-none fixed inset-0" />
+      <div className="moving-scanlines pointer-events-none fixed inset-0 opacity-40" />
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>

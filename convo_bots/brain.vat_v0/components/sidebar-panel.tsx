@@ -98,7 +98,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
       side === 'left' ? 'border-r' : 'border-l'
     )}>
       <h2 className={cn('text-lg font-bold mb-1 tracking-tighter uppercase', colorClass, glowClass)}>
-        {owner}
+        {owner === 'MAUK' ? 'MAUK_v2.1' : 'ABACI_v2.1'}
       </h2>
       
       <div className="mb-4 pb-2 border-b border-border/30">
