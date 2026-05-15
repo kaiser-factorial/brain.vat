@@ -30,13 +30,13 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
           .select('*')
           .eq('bot', bot)
           .order('weight', { ascending: false })
-          .limit(10)
-        
+          .limit(17)
+
         if (error) {
           setError(error.message)
           throw error
         }
-        
+
         if (data) {
           setConcepts(data)
           if (isInitial) {
@@ -65,9 +65,9 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
       .channel(`concepts-${bot}`)
       .on(
         'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
+        {
+          event: '*',
+          schema: 'public',
           table: 'memory_concepts',
           filter: `bot=eq.${bot}`
         },
@@ -125,11 +125,11 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
       <h2 className={cn('text-lg font-bold mb-1 tracking-tighter uppercase', colorClass, glowClass)}>
         {owner === 'MAUK' ? 'MAUK_v2.1' : 'ABACI_v2.1'}
       </h2>
-      
+
       <div className="mb-4 pb-2 border-b border-border/30">
         <StabilityVitals bot={bot} />
       </div>
-      
+
       <div className={cn(
         "flex-1 space-y-4 overflow-y-auto scrollbar-none px-2",
       )}>
@@ -143,11 +143,11 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
           <p className="text-sm text-muted-foreground italic animate-pulse font-mono">no memories yet</p>
         ) : (
           concepts.map((concept) => {
-            const hasValidSource = sourceText && 
-                                   sourceText !== 'recalling...' && 
-                                   sourceText !== '(Context lost to time)' && 
-                                   sourceText !== '(error recalling)' &&
-                                   sourceText !== '(Source unavailable — offline mode)'
+            const hasValidSource = sourceText &&
+              sourceText !== 'recalling...' &&
+              sourceText !== '(Context lost to time)' &&
+              sourceText !== '(error recalling)' &&
+              sourceText !== '(Source unavailable — offline mode)'
 
             const isNew = !seenIds.has(concept.id)
 
@@ -158,7 +158,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                 onMouseEnter={() => handleMouseEnter(concept.concept)}
                 onMouseLeave={() => setHoveredConcept(null)}
               >
-                <div 
+                <div
                   className={cn(
                     "flex items-baseline gap-2 transition-all duration-300 hover:scale-105 hover:opacity-100 hover:brightness-125",
                     "text-opacity-60",
@@ -167,7 +167,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                   style={{ opacity: 0.5 + (concept.weight / 10) * 0.5 }}
                 >
                   <span className={cn(
-                    'font-mono font-medium flex-1 min-w-0 text-xs', 
+                    'font-mono font-medium flex-1 min-w-0 text-xs',
                     colorClass,
                     'text-left'
                   )}>
@@ -184,7 +184,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                     [{(concept.weight * 10).toFixed(0)}%]
                   </span>
                 </div>
-                
+
                 {hoveredConcept === concept.concept && hasValidSource && (
                   <div className={cn(
                     "absolute z-50 top-full mt-1 p-2 bg-card border border-border rounded shadow-2xl text-[10px] leading-tight animate-in fade-in slide-in-from-top-1 w-[220px] font-mono",
