@@ -70,9 +70,9 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           <button
             onClick={handleSubmit}
             disabled={!content.trim() || isSending}
-            className="text-terminal-green hover:text-terminal-green/80 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-6 min-w-[140px] min-h-[60px] flex items-center justify-center border-l border-border/20 ml-2 cursor-pointer disabled:cursor-not-allowed"
+            className="text-terminal-green hover:text-terminal-green/80 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-8 min-w-[180px] min-h-[80px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed"
           >
-            <div className="text-3xl font-black tracking-tighter pointer-events-none">
+            <div className="font-black tracking-tighter pointer-events-none scale-[2.2] origin-center">
               <GlitchText 
                 text={showSent ? "[SENT]" : "[SEND]"} 
                 color="#10ff50" 
