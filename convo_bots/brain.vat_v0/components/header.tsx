@@ -80,7 +80,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="border-b border-border bg-header-bg backdrop-blur-md px-6 py-4 relative overflow-hidden noise-overlay">
+      <header className="border-b border-border bg-header-bg backdrop-blur-md px-6 py-4 relative overflow-hidden noise-overlay z-50">
         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
         
         <div className="flex items-center justify-between relative z-10">
@@ -134,15 +134,14 @@ export function Header({ onAuthClick }: HeaderProps) {
                       </span>
                       <span className="text-[8px] text-muted-foreground opacity-50 font-mono">SESSION: ACTIVE</span>
                     </div>
-                    <button
+                    <NavLink
                       onClick={async () => {
                         await signOut()
                         window.location.href = '/'
                       }}
-                      className="text-[10px] font-mono text-primary/60 hover:text-primary transition-colors uppercase tracking-widest border border-primary/20 px-2 py-1 rounded hover:bg-primary/5"
                     >
                       exit
-                    </button>
+                    </NavLink>
                   </>
                 ) : (
                   <NavLink onClick={onAuthClick}>authenticate</NavLink>
