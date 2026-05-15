@@ -63,40 +63,64 @@ export async function getStoredKey(userId: string, provider: APIProvider): Promi
   const ck = cacheKey(userId, provider)
   if (keyCache.has(ck)) return keyCache.get(ck)!
 
-  const supabase = createClient()
-  const { data } = await supabase
-    .from('user_api_keys')
-    .select('api_key')
-    .eq('user_id', userId)
-    .eq('provider', provider)
-    .single()
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('user_api_keys')
+      .select('api_key')
+      .eq('user_id', userId)
+      .eq('provider', provider)
+      .maybeSingle() // Use maybeSingle to avoid errors on 0 rows
 
-  if (data?.api_key) keyCache.set(ck, data.api_key)
-  return data?.api_key ?? null
+    if (error) {
+      console.warn('[BYOB] Error fetching key:', error.message)
+      return null
+    }
+
+    if (data?.api_key) {
+      keyCache.set(ck, data.api_key)
+      return data.api_key
+    }
+  } catch (err) {
+    console.error('[BYOB] Unexpected error in getStoredKey:', err)
+  }
+  return null
 }
 
 export async function setStoredKey(userId: string, provider: APIProvider, key: string): Promise<void> {
-  const supabase = createClient()
-  await supabase.from('user_api_keys').upsert({
-    user_id: userId,
-    provider,
-    api_key: key,
-    updated_at: new Date().toISOString(),
-  })
-  keyCache.set(cacheKey(userId, provider), key)
+  try {
+    const supabase = createClient()
+    const { error } = await supabase.from('user_api_keys').upsert({
+      user_id: userId,
+      provider,
+      api_key: key.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    
+    if (error) throw error
+    keyCache.set(cacheKey(userId, provider), key.trim())
+  } catch (err) {
+    console.error('[BYOB] Failed to save key:', err)
+    throw err
+  }
 }
 
 export async function removeStoredKey(userId: string, provider: APIProvider): Promise<void> {
-  const supabase = createClient()
-  await supabase.from('user_api_keys')
-    .delete()
-    .eq('user_id', userId)
-    .eq('provider', provider)
-  keyCache.delete(cacheKey(userId, provider))
+  try {
+    const supabase = createClient()
+    await supabase.from('user_api_keys')
+      .delete()
+      .eq('user_id', userId)
+      .eq('provider', provider)
+    keyCache.delete(cacheKey(userId, provider))
+  } catch (err) {
+    console.error('[BYOB] Failed to remove key:', err)
+  }
 }
 
 export async function hasStoredKey(userId: string, provider: APIProvider): Promise<boolean> {
-  return (await getStoredKey(userId, provider)) !== null
+  const key = await getStoredKey(userId, provider)
+  return !!key
 }
 
 // ─── Anthropic message normalizer ─────────────────────────────────────────────

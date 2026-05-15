@@ -130,6 +130,7 @@ export function BYOBModal() {
   // UI state
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [saving, setSaving]     = useState(false)
+  const [savingKey, setSavingKey] = useState(false)
   const [saveMsg, setSaveMsg]   = useState<string | null>(null)
   const [botId, setBotId]       = useState<string | null>(null)
 
@@ -139,27 +140,36 @@ export function BYOBModal() {
     if (user.user_metadata?.byob_tos_accepted_at) setByobTosAccepted(true)
 
     const load = async () => {
-      const { data } = await supabase
-        .from('bots')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from('bots')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
 
-      if (data) {
-        const bot = data as UserBot
-        setBotId(bot.id)
-        setName(bot.name)
-        setProvider(bot.api_provider)
-        setModel(bot.model)
-        setSystemPrompt(bot.system_prompt ?? '')
-        setTemperature(bot.temperature)
-        setMaxTokens(bot.max_tokens)
-        setBaseSleep(bot.base_sleep)
-        setBaseJitter(bot.base_jitter)
-        const stored = await hasStoredKey(user.id, bot.api_provider)
-        setKeyStored(stored)
+        if (error) {
+          console.warn('[BYOBModal] Load error:', error.message)
+          return
+        }
+
+        if (data) {
+          const bot = data as UserBot
+          setBotId(bot.id)
+          setName(bot.name)
+          setProvider(bot.api_provider)
+          setModel(bot.model)
+          setSystemPrompt(bot.system_prompt ?? '')
+          setTemperature(bot.temperature)
+          setMaxTokens(bot.max_tokens)
+          setBaseSleep(bot.base_sleep)
+          setBaseJitter(bot.base_jitter)
+          const stored = await hasStoredKey(user.id, bot.api_provider)
+          setKeyStored(stored)
+        }
+      } catch (err) {
+        console.error('[BYOBModal] Load failed:', err)
       }
     }
     load()
@@ -175,6 +185,7 @@ export function BYOBModal() {
     const m = DEFAULT_MODELS[p]
     setModel(m)
     setApiKey('')
+    setErrorMsg(null)
     if (p === 'vat-space') {
       const b = VAT_SPACE_BOTS.find(x => x.key === m)
       if (b) setName(b.label)
@@ -183,23 +194,37 @@ export function BYOBModal() {
 
   const handleSaveKey = async () => {
     if (!user || !apiKey.trim()) return
-    await setStoredKey(user.id, provider, apiKey.trim())
-    setApiKey('')
-    setKeyStored(true)
-    setSaveMsg('key saved')
-    setTimeout(() => setSaveMsg(null), 3000)
+    setSavingKey(true)
+    setErrorMsg(null)
+    try {
+      await setStoredKey(user.id, provider, apiKey.trim())
+      setApiKey('')
+      setKeyStored(true)
+      setSaveMsg('key saved')
+      setTimeout(() => setSaveMsg(null), 3000)
+    } catch (err: any) {
+      setErrorMsg(`Failed to save key: ${err.message || String(err)}`)
+    } finally {
+      setSavingKey(false)
+    }
   }
 
   const handleRemoveKey = async () => {
     if (!user) return
+    setErrorMsg(null)
     await removeStoredKey(user.id, provider)
     setKeyStored(false)
   }
 
   const handleAcceptByobTos = async () => {
     if (!user || !byobTosChecked) return
-    await supabase.auth.updateUser({ data: { byob_tos_accepted_at: new Date().toISOString() } })
-    setByobTosAccepted(true)
+    setErrorMsg(null)
+    try {
+      await supabase.auth.updateUser({ data: { byob_tos_accepted_at: new Date().toISOString() } })
+      setByobTosAccepted(true)
+    } catch (err: any) {
+      setErrorMsg(`Failed to accept terms: ${err.message || String(err)}`)
+    }
   }
 
   const handleEnterVat = async () => {
@@ -229,14 +254,20 @@ export function BYOBModal() {
         is_active: true,
       }
 
+      const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout — please check your connection and try again')), ms))
+
       let savedId = botId
-      if (botId) {
-        await supabase.from('bots').update(botData).eq('id', botId)
-      } else {
-        const { data } = await supabase.from('bots').insert(botData).select('id').single()
-        savedId = data?.id ?? null
-        setBotId(savedId)
+      const dbOp = async () => {
+        if (botId) {
+          await supabase.from('bots').update(botData).eq('id', botId)
+        } else {
+          const { data } = await supabase.from('bots').insert(botData).select('id').single()
+          savedId = data?.id ?? null
+          setBotId(savedId)
+        }
       }
+
+      await Promise.race([dbOp(), timeout(10000)])
 
       const config: BYOBConfig = {
         botName: name.trim(),
@@ -494,10 +525,10 @@ export function BYOBModal() {
                   />
                   <button
                     onClick={handleSaveKey}
-                    disabled={!apiKey.trim()}
+                    disabled={!apiKey.trim() || savingKey}
                     className="text-xs font-mono px-3 py-1.5 border border-border rounded-sm hover:border-primary hover:text-primary transition-colors disabled:opacity-40"
                   >
-                    [save]
+                    {savingKey ? '[saving...]' : '[save]'}
                   </button>
                   {keyStored && (
                     <button
