@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { StabilityVitals } from './stability-vitals'
 import { useSystemStatus } from '@/lib/system-status-context'
 import { VoiceToggle } from './voice-toggle'
+import { cn } from '@/lib/utils'
 
 function SystemStatusIndicator() {
   const { isOnline, isLoopActive } = useSystemStatus()

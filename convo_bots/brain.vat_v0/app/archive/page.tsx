@@ -93,7 +93,7 @@ export default function ArchivePage() {
               <div className="flex flex-col border border-mauk/20 bg-mauk/5 p-4 rounded-sm group">
                 <h2 className="text-mauk text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-mauk mauk-glow animate-pulse" />
-                  MAUK / EXCLUSIVE
+                  MAUK_v2.1 / EXCLUSIVE
                 </h2>
                 <div className="flex-1 md:overflow-y-auto space-y-3 pr-2 scrollbar-thin min-h-[300px]">
                   {groupA.map(c => (
@@ -135,7 +135,7 @@ export default function ArchivePage() {
               {/* Column B: ABACI Exclusive */}
               <div className="flex flex-col border border-abaci/20 bg-abaci/5 p-4 rounded-sm">
                 <h2 className="text-abaci text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 justify-end">
-                  ABACI / EXCLUSIVE
+                  ABACI_v2.1 / EXCLUSIVE
                   <div className="w-2 h-2 rounded-full bg-abaci abaci-glow animate-pulse" />
                 </h2>
                 <div className="flex-1 md:overflow-y-auto space-y-3 pr-2 scrollbar-thin text-right min-h-[300px]">
