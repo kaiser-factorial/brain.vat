@@ -326,6 +326,14 @@ export class BYOBLoop {
         if (error) throw new Error(`Supabase fetch: ${error.message}`)
 
         const messages = (rawMessages ?? []).reverse()
+        
+        // ─── Self-Response Prevention ─────────────────────────────────────────
+        if (messages.length > 0) {
+          const lastMsg = messages[messages.length - 1]
+          if (lastMsg.speaker.trim().toUpperCase() === this.config.botName.trim().toUpperCase()) {
+            throw new SkipCycleError('last message was sent by me')
+          }
+        }
 
         const history = messages.map((m: { speaker: string; text: string; role: string }) => {
           const isSelf = m.speaker.trim().toUpperCase() === this.config.botName.trim().toUpperCase()

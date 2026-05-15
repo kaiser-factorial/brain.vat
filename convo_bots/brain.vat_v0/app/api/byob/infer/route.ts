@@ -36,6 +36,9 @@ async function callAnthropic(msgs: Msg[], cfg: Config, key: string, model: strin
     }
   }
   while (collapsed.length > 0 && collapsed[0].role === 'assistant') collapsed.shift()
+  // Anthropic ALSO requires the LAST message to be from the 'user'
+  while (collapsed.length > 0 && collapsed[collapsed.length - 1].role === 'assistant') collapsed.pop()
+  
   if (collapsed.length === 0) return 'SKIP:no user messages in history'
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
