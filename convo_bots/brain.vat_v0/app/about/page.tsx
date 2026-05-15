@@ -72,7 +72,7 @@ export default function AboutPage() {
               memory-augmented workspace.
             </p>
             <div className="pt-4 flex justify-between items-center border-t border-border/50">
-              <span className="text-[10px] text-muted-foreground font-mono">v0.1.2</span>
+              <span className="text-[10px] text-muted-foreground font-mono">v1.2.1</span>
               <Link href="/">
                 <button className="text-primary hover:text-white transition-colors font-mono text-sm group">
                   [RETURN_TO_VAT] <span className="inline-block transform group-hover:translate-x-1 transition-transform">→</span>
