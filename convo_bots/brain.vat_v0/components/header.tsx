@@ -88,32 +88,29 @@ export function Header({ onAuthClick }: HeaderProps) {
   return (
     <>
       <header className="bg-header-bg backdrop-blur-md px-6 pt-1 pb-1 relative overflow-hidden noise-overlay z-50">
-        <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#E63946' } as any}>
-          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_15px_rgba(230,57,70,0.4)]" />
+        <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#6b7280' } as any}>
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent shadow-[0_0_10px_rgba(107,114,128,0.2)]" />
         </div>
 
         <div className="flex items-start justify-between relative z-10">
           {/* Left: Branding & Main Nav */}
           <div className="flex items-center gap-8 flex-1">
             <Link href="/">
-              <h1 className="text-xl font-black text-primary cursor-pointer branding-pulse tracking-tighter flex items-center gap-2">
-                <span className="bg-primary text-background px-1 py-0.5 rounded-sm text-xs">VAT</span>
+              <h1 className="text-2xl font-black text-primary cursor-pointer branding-pulse tracking-tighter flex items-center gap-2">
+                <span className="bg-primary text-background px-1.5 py-0.5 rounded-sm text-sm">VAT</span>
                 brain.vat
               </h1>
             </Link>
-
+            
             <nav className="hidden md:flex items-center">
               <CyberButtonGroup cornerSize={6}>
                 <NavLink href="/about">about</NavLink>
                 <NavLink href="/archive">archive</NavLink>
+                {user?.email === 'kaiser.factorial@gmail.com' && (
+                  <NavLink href="/admin">control</NavLink>
+                )}
               </CyberButtonGroup>
             </nav>
-          </div>
-
-          {/* Center: System Status */}
-          <div className="flex flex-col items-center">
-            <SystemStatusIndicator />
-            <div className="h-[1px] w-8 bg-border/20 rounded-full mt-0.5" />
           </div>
 
           {/* Right: User Profile (Minimal) */}
@@ -125,48 +122,45 @@ export function Header({ onAuthClick }: HeaderProps) {
             )}
 
             {user && (
-              <div className="flex items-center gap-4">
-                {user?.email === 'kaiser.factorial@gmail.com' && (
-                  <CyberButtonGroup cornerSize={6}>
-                    <NavLink href="/admin">control</NavLink>
-                  </CyberButtonGroup>
-                )}
-                <div className="flex flex-col items-end border-l border-border/20 pl-4 group">
-                  <span className="text-[11px] font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
-                    {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
-                  </span>
-                  <span className="text-[7px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
-                    Active Session
-                  </span>
-                </div>
+              <div className="flex flex-col items-end border-l border-border/20 pl-4 group">
+                <span className="text-[11px] font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
+                  {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
+                </span>
+                <span className="text-[7px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
+                  Active Session
+                </span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Bottom Row: Bot Description & Operator Toggles */}
-        <div className="flex items-center justify-between relative z-10 -mt-1">
-          {/* Left spacer to keep description centered */}
-          <div className="flex-1 hidden md:block" />
+        {/* Bottom Section: Status, Description & Operator Toggles */}
+        <div className="flex flex-col items-center mt-2 relative z-10">
+          <SystemStatusIndicator />
+          
+          <div className="flex items-center justify-between w-full -mt-0.5">
+            {/* Left spacer to keep description centered */}
+            <div className="flex-1 hidden md:block" />
+            
+            <div className="flex-1 flex justify-center">
+              <p className="text-[10px] text-muted-foreground/40 text-center font-mono uppercase tracking-[0.2em] whitespace-nowrap">
+                a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
+              </p>
+            </div>
 
-          <div className="flex-1 flex justify-center">
-            <p className="text-[10px] text-muted-foreground/40 text-center font-mono uppercase tracking-[0.2em] whitespace-nowrap">
-              a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
-            </p>
-          </div>
-
-          <div className="flex-1 flex justify-end">
-            {user && (
-              <div className="flex items-center gap-3 scale-90 origin-right">
-                <CyberCheckbox
-                  checked={byobActive}
-                  onChange={openBYOB}
-                  label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
-                  accent="#10ff50"
-                />
-                <VoiceToggle />
-              </div>
-            )}
+            <div className="flex-1 flex justify-end">
+              {user && (
+                <div className="flex items-center gap-3 scale-90 origin-right">
+                  <CyberCheckbox
+                    checked={byobActive}
+                    onChange={openBYOB}
+                    label={byobActive ? (byobBotName || 'BYOB') : 'BYOB'}
+                    accent="#10ff50"
+                  />
+                  <VoiceToggle />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
