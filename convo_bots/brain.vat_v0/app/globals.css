@@ -265,6 +265,26 @@
   animation: branding-pulse 4s infinite ease-in-out;
 }
 
+/* Neon Pulse Animation */
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.4; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.5); }
+}
+
+.neon-pulse {
+  animation: neon-pulse 3s infinite ease-in-out;
+}
+
+.vertical-neon-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  animation: neon-pulse 3s infinite ease-in-out;
+  background: linear-gradient(180deg, transparent 0%, var(--line-color, #10ff50) 20%, var(--line-color, #10ff50) 80%, transparent 100%);
+  opacity: 0.5;
+}
+
 /* Noise overlay */
 .noise-overlay {
   position: relative;

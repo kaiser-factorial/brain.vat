@@ -9,6 +9,7 @@ import { StabilityVitals } from './stability-vitals'
 import { useSystemStatus } from '@/lib/system-status-context'
 import { VoiceToggle } from './voice-toggle'
 import { cn } from '@/lib/utils'
+import { NeonDivider } from 'ccru/components'
 
 function SystemStatusIndicator() {
   const { isOnline, isLoopActive } = useSystemStatus()
@@ -80,8 +81,10 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="border-b border-border bg-header-bg backdrop-blur-md px-6 py-4 relative overflow-hidden noise-overlay z-50">
-        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
+      <header className="bg-header-bg backdrop-blur-md px-6 py-4 relative overflow-hidden noise-overlay z-50">
+        <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#E63946' } as any}>
+          <NeonDivider color="#E63946" />
+        </div>
         
         <div className="flex items-center justify-between relative z-10">
           {/* Left: Branding & Main Nav */}

@@ -17,8 +17,9 @@ export function BrainVat() {
       
       <div className="flex flex-1 min-h-0 relative z-10">
         {/* MAUK sidebar - left */}
-        <aside className="hidden lg:block w-72 bg-card/30 border-r border-border/50 backdrop-blur-sm">
+        <aside className="hidden lg:block w-72 bg-card/30 backdrop-blur-sm relative">
           <SidebarPanel owner="MAUK" side="left" />
+          <div className="vertical-neon-line right-0" style={{ '--line-color': '#03A6A1', '--pulse-color': '#03A6A1' } as any} />
         </aside>
 
         {/* Main feed */}
@@ -27,7 +28,8 @@ export function BrainVat() {
         </main>
 
         {/* ABACI sidebar - right */}
-        <aside className="hidden lg:block w-72 bg-card/30 border-l border-border/50 backdrop-blur-sm">
+        <aside className="hidden lg:block w-72 bg-card/30 backdrop-blur-sm relative">
+          <div className="vertical-neon-line left-0" style={{ '--line-color': '#FF9D23', '--pulse-color': '#FF9D23' } as any} />
           <SidebarPanel owner="ABACI" side="right" />
         </aside>
       </div>
