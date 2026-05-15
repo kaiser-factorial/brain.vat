@@ -69,7 +69,7 @@ function NavLink({ href, children, onClick, active }: { href?: string; children:
       onClick={handleClick}
       active={isCurrent}
       className={cn(
-        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0 transition-colors",
+        "font-mono px-4 border-r-2 border-[#10ff50]/20 last:border-r-0 transition-colors",
         "hover:bg-[#10ff50]/10 hover:text-[#10ff50]",
         isCurrent ? "bg-[#10ff50]/20 text-[#10ff50]" : "text-muted-foreground"
       )}
@@ -87,7 +87,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-header-bg backdrop-blur-md px-6 pt-1 pb-1 relative overflow-hidden noise-overlay z-50">
+      <header className="bg-black backdrop-blur-md px-6 pt-2 pb-2 relative overflow-hidden z-50">
         <div className="absolute inset-x-0 bottom-0 neon-pulse" style={{ '--pulse-color': '#6b7280' } as any}>
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent shadow-[0_0_10px_rgba(107,114,128,0.2)]" />
         </div>
@@ -123,10 +123,10 @@ export function Header({ onAuthClick }: HeaderProps) {
 
             {user && (
               <div className="flex flex-col items-end border-l border-border/20 pl-4 group">
-                <span className="text-[11px] font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
+                <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_10px_rgba(16,255,80,0.5)]">
                   {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
                 </span>
-                <span className="text-[7px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
+                <span className="text-[8px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
                   Active Session
                 </span>
               </div>
@@ -135,10 +135,12 @@ export function Header({ onAuthClick }: HeaderProps) {
         </div>
 
         {/* Bottom Section: Status, Description & Operator Toggles */}
-        <div className="flex flex-col items-center mt-2 relative z-10">
-          <SystemStatusIndicator />
+        <div className="flex flex-col items-center mt-0 relative z-10">
+          <div className="-mt-3.5 mb-1.5">
+            <SystemStatusIndicator />
+          </div>
           
-          <div className="flex items-center justify-between w-full -mt-0.5">
+          <div className="flex items-center justify-between w-full">
             {/* Left spacer to keep description centered */}
             <div className="flex-1 hidden md:block" />
             
