@@ -9,7 +9,7 @@ import { StabilityVitals } from './stability-vitals'
 import { useSystemStatus } from '@/lib/system-status-context'
 import { VoiceToggle } from './voice-toggle'
 import { cn } from '@/lib/utils'
-import { NeonDivider, CyberButton, CyberButtonGroup } from 'ccru/components'
+import { NeonDivider, CyberButton, CyberButtonGroup, CyberCheckbox } from 'ccru/components'
 import { useRouter, usePathname } from 'next/navigation'
 
 function SystemStatusIndicator() {
