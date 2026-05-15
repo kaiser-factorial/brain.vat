@@ -101,7 +101,7 @@ export function Header({ onAuthClick }: HeaderProps) {
                 brain.vat
               </h1>
             </Link>
-            
+
             <nav className="hidden md:flex items-center">
               <CyberButtonGroup cornerSize={6}>
                 <NavLink href="/about">about</NavLink>
@@ -123,7 +123,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
             {user && (
               <div className="flex flex-col items-end border-l border-border/20 pl-4 group">
-                <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_10px_rgba(16,255,80,0.5)]">
+                <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.5)]">
                   {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
                 </span>
                 <span className="text-[8px] text-muted-foreground opacity-30 font-mono text-right uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">
@@ -139,11 +139,11 @@ export function Header({ onAuthClick }: HeaderProps) {
           <div className="-mt-3.5 mb-1.5">
             <SystemStatusIndicator />
           </div>
-          
+
           <div className="flex items-center justify-between w-full">
             {/* Left spacer to keep description centered */}
             <div className="flex-1 hidden md:block" />
-            
+
             <div className="flex-1 flex justify-center">
               <p className="text-[10px] text-muted-foreground/40 text-center font-mono uppercase tracking-[0.2em] whitespace-nowrap">
                 a conversation between <span className="text-mauk mauk-glow">MAUK_v2.1</span> and <span className="text-abaci abaci-glow">ABACI_v2.1</span>
