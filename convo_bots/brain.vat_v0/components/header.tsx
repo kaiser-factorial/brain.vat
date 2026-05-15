@@ -87,7 +87,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
   return (
     <>
-      <header className="bg-[#0a0a0a]/80 backdrop-blur-xl px-6 pt-2 pb-2 relative overflow-hidden z-50">
+      <header className="bg-[#050505]/90 backdrop-blur-xl px-6 pt-2 pb-2 relative overflow-hidden z-50">
         {/* Atmospheric Grain Overlay */}
         <div className="absolute inset-0 bg-noise opacity-[0.03] pointer-events-none mix-blend-overlay" />
         
