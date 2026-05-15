@@ -1,7 +1,8 @@
 'use client'
 
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react'
+import React, { createContext, useCallback, useContext, useRef, useState, useEffect } from 'react'
 import type { Message } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Context shape ─────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ const VoiceModeContext = createContext<VoiceModeContextValue>({
 
 export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
   const [isVoiceActive, setIsVoiceActive] = useState(false)
+  const supabase = createClient()
 
   // Ref mirror so closures inside realtime callbacks never go stale
   const isVoiceActiveRef = useRef(false)
@@ -43,8 +45,6 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
     isPlaying.current = true
     const message = queue.current.shift()!
 
-    console.log(`[Voice] 🔊 Fetching TTS for ${message.speaker}: "${message.text.slice(0, 60)}..."`)
-
     try {
       const res = await fetch('/api/tts', {
         method:  'POST',
@@ -52,12 +52,7 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
         body:    JSON.stringify({ text: message.text, speaker: message.speaker }),
       })
 
-      console.log(`[Voice] ← /api/tts status=${res.status} content-type=${res.headers.get('content-type')}`)
-
       if (!res.ok) {
-        // Try to read the error JSON from our updated route
-        const errBody = await res.text().catch(() => '<unreadable>')
-        console.error(`[Voice] ❌ TTS API error (${res.status}):`, errBody)
         isPlaying.current = false
         playNext()
         return
@@ -69,10 +64,7 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
       }
 
       const blob = await res.blob()
-      console.log(`[Voice] ✅ Got audio blob size=${blob.size} type=${blob.type}`)
-
       if (blob.size === 0) {
-        console.error('[Voice] ❌ Empty audio blob received!')
         isPlaying.current = false
         playNext()
         return
@@ -84,7 +76,6 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
       currentAudio.current = audio
 
       audio.onended = () => {
-        console.log(`[Voice] ✅ Playback finished for ${message.speaker}`)
         URL.revokeObjectURL(url)
         currentBlobUrl.current = null
         currentAudio.current   = null
@@ -92,8 +83,7 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
         playNext()
       }
 
-      audio.onerror = (e) => {
-        console.error('[Voice] ❌ Audio playback error:', e)
+      audio.onerror = () => {
         URL.revokeObjectURL(url)
         currentBlobUrl.current = null
         currentAudio.current   = null
@@ -101,10 +91,8 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
         playNext()
       }
 
-      console.log(`[Voice] ▶ Playing audio for ${message.speaker}...`)
       await audio.play()
     } catch (err) {
-      console.error('[Voice] ❌ Unexpected error in playNext:', err)
       isPlaying.current = false
       playNext()
     }
@@ -116,7 +104,6 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
     setIsVoiceActive(prev => {
       const next = !prev
       isVoiceActiveRef.current = next
-      console.log(`[Voice] 🎙 Voice mode ${next ? 'ON' : 'OFF'}`)
       if (!next) {
         queue.current = []
         if (currentAudio.current) {
@@ -136,7 +123,6 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
   // ── speakMessage ───────────────────────────────────────────────────────────
 
   const speakMessage = useCallback((message: Message) => {
-    console.log(`[Voice] speakMessage called | voiceActive=${isVoiceActiveRef.current} role=${message.role} speaker=${message.speaker}`)
     if (!isVoiceActiveRef.current) return
     if (message.role !== 'bot') return
     if (message.speaker !== 'MAUK' && message.speaker !== 'ABACI') return
@@ -144,6 +130,25 @@ export function VoiceModeProvider({ children }: { children: React.ReactNode }) {
     queue.current.push(message)
     playNext()
   }, [playNext])
+
+  // ── Background Subscription ────────────────────────────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('global-voice')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const newMsg = payload.new as Message
+          speakMessage(newMsg)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, speakMessage])
 
   return (
     <VoiceModeContext.Provider value={{ isVoiceActive, toggleVoice, speakMessage }}>

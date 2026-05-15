@@ -62,7 +62,6 @@ export function MessageFeed({ onAuthClick }: MessageFeedProps) {
         (payload: { new: Message }) => {
           const newMsg = payload.new as Message
           setMessages((prev) => [...prev, newMsg])
-          speakMessage(newMsg)  // ← VOICE
         }
       )
       .subscribe()
