@@ -97,7 +97,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
         <div className="flex items-start justify-between relative z-10">
           {/* Left: Branding & Main Nav */}
-          <div className="flex items-center gap-8 flex-1 translate-y-[15px]">
+          <div className="flex items-center gap-8 flex-1 translate-y-[17px]">
             <Link href="/">
               <h1 className="text-2xl font-black text-primary cursor-pointer branding-pulse tracking-tighter flex items-center gap-2">
                 <span className="bg-primary text-background px-1.5 py-0.5 rounded-sm text-sm">VAT</span>
