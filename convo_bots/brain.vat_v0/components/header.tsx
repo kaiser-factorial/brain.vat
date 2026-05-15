@@ -51,7 +51,7 @@ interface HeaderProps {
   onAuthClick?: () => void
 }
 
-function NavLink({ href, children, onClick, active, shortcut }: { href?: string; children: React.ReactNode; onClick?: () => void; active?: boolean; shortcut?: string }) {
+function NavLink({ href, children, onClick, active }: { href?: string; children: React.ReactNode; onClick?: () => void; active?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const isCurrent = active || (href && pathname === href)
@@ -68,9 +68,9 @@ function NavLink({ href, children, onClick, active, shortcut }: { href?: string;
     <CyberButton 
       onClick={handleClick} 
       active={isCurrent}
-      shortcut={shortcut}
       className={cn(
-        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0",
+        "font-mono px-4 border-r border-[#10ff50]/10 last:border-r-0 transition-colors",
+        "hover:bg-[#10ff50]/10 hover:text-[#10ff50]",
         isCurrent ? "bg-[#10ff50]/20 text-[#10ff50]" : "text-muted-foreground"
       )}
       size="sm"
@@ -104,10 +104,10 @@ export function Header({ onAuthClick }: HeaderProps) {
             
             <nav className="hidden md:flex items-center">
               <CyberButtonGroup>
-                <NavLink href="/about" shortcut="a">about</NavLink>
-                <NavLink href="/archive" shortcut="r">archive</NavLink>
+                <NavLink href="/about">about</NavLink>
+                <NavLink href="/archive">archive</NavLink>
                 {user && (
-                  <NavLink onClick={openBYOB} active={byobActive} shortcut="b">
+                  <NavLink onClick={openBYOB} active={byobActive}>
                     {byobActive ? byobBotName : 'byob'}
                   </NavLink>
                 )}
@@ -127,30 +127,26 @@ export function Header({ onAuthClick }: HeaderProps) {
               {!isLoading && user && (
                 <div className="flex items-center">
                   {user?.email === 'kaiser.factorial@gmail.com' && (
-                    <NavLink href="/admin" shortcut="c">control</NavLink>
+                    <NavLink href="/admin">control</NavLink>
                   )}
                 </div>
               )}
 
-              {!isLoading && (
+              {!isLoading && !user && (
                 <div className="flex items-center">
-                  {user ? (
-                    <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-terminal-green/50 font-mono">
-                      [VAT_PERSISTENCE_ACTIVE]
-                    </div>
-                  ) : (
-                    <NavLink onClick={onAuthClick} shortcut="l">authenticate</NavLink>
-                  )}
+                  <NavLink onClick={onAuthClick}>authenticate</NavLink>
                 </div>
               )}
             </CyberButtonGroup>
 
             {user && (
-              <div className="flex flex-col items-end border-l border-border/30 pl-6">
-                <span className="text-[10px] font-bold text-terminal-green tracking-widest font-mono">
+              <div className="flex flex-col items-end border-l border-border/30 pl-6 group">
+                <span className="text-xs font-black text-terminal-green tracking-[0.2em] font-mono drop-shadow-[0_0_8px_rgba(16,255,80,0.4)]">
                   {(displayName?.toUpperCase() === 'CORINA' ? 'BRICK.FACTORIAL' : displayName) || 'anon'}
                 </span>
-                <span className="text-[8px] text-muted-foreground opacity-50 font-mono text-right">SESSION: ACTIVE</span>
+                <span className="text-[8px] text-muted-foreground opacity-40 font-mono text-right uppercase tracking-widest group-hover:opacity-100 transition-opacity">
+                  Active Session
+                </span>
               </div>
             )}
           </div>
@@ -167,4 +163,5 @@ export function Header({ onAuthClick }: HeaderProps) {
     </>
   )
 }
+
 
