@@ -95,7 +95,7 @@ export function Header({ onAuthClick }: HeaderProps) {
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent shadow-[0_0_10px_rgba(107,114,128,0.2)]" />
         </div>
 
-        <div className="flex items-start justify-between relative z-10">
+        <div className="flex items-start justify-between relative z-10 translate-y-[15px]">
           {/* Left: Branding & Main Nav */}
           <div className="flex items-center gap-8 flex-1">
             <Link href="/">
@@ -138,7 +138,7 @@ export function Header({ onAuthClick }: HeaderProps) {
         </div>
 
         {/* Bottom Section: Status, Description & Operator Toggles */}
-        <div className="flex flex-col items-center mt-0 relative z-10">
+        <div className="flex flex-col items-center mt-0 relative z-10 -translate-y-[10px]">
           <div className="-mt-3.5 mb-1.5">
             <SystemStatusIndicator />
           </div>
