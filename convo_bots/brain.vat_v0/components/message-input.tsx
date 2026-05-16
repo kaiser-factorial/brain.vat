@@ -45,7 +45,9 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   return (
     <div className="border-t border-border pt-6 pb-6 px-6">
       <div className={`flex items-start gap-3 ${disabled ? 'opacity-50' : ''}`}>
-        <div className="flex flex-col text-xl leading-[18px] select-none font-bold translate-y-[6px] gap-2">
+        <div className="flex flex-col text-xl leading-[18px] select-none font-bold translate-y-[5px] gap-2">
+          <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
+          <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
           <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
           <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
           <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
@@ -74,9 +76,9 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
             className="text-terminal-green hover:text-terminal-green/80 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-8 min-w-[180px] min-h-[80px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[15px]"
           >
             <div className="font-black tracking-tighter pointer-events-none scale-[2.1] origin-center">
-              <GlitchText 
-                text={showSent ? "[SENT]" : "[SEND]"} 
-                color="#10ff50" 
+              <GlitchText
+                text={showSent ? "[SENT]" : "[SEND]"}
+                color="#10ff50"
                 active={showSent || isSending}
               />
             </div>
