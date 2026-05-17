@@ -6,7 +6,7 @@ import { StabilityVitals } from './stability-vitals'
 import type { MemoryConcept, Bot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-const GLITCH_CHARS = '☠☣⚡ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz⚠⚙⚙⌬⏃⏄⏅⏆⏇⏈⏉⏊⏋⏌⌥⎇✦✧■□▲▼○●'
+const GLITCH_CHARS = '☣⚡ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz⚠✦✧▲▼'
 
 function LocalGlitchText({
   text,
