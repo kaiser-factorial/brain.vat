@@ -39,9 +39,6 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
 
         if (data) {
           setConcepts(data)
-          if (isInitial) {
-            setSeenIds(new Set(data.map(c => c.id)))
-          }
           setError(null)
         }
       } catch (err: any) {
