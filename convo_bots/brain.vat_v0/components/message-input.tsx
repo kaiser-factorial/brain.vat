@@ -90,7 +90,6 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
               <GlitchText
                 text={showSent ? "[SENT]" : "[SEND]"}
                 color="#10ff50"
-                active={showSent || isSending}
               />
             </div>
           </button>

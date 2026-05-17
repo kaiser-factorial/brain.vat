@@ -54,7 +54,7 @@ interface HeaderProps {
 function NavLink({ href, children, onClick, active }: { href?: string; children: React.ReactNode; onClick?: () => void; active?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
-  const isCurrent = active || (href && pathname === href)
+  const isCurrent = !!(active || (href && pathname === href))
 
   const handleClick = () => {
     if (onClick) {
