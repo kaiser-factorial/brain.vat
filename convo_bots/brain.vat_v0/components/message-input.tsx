@@ -13,7 +13,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   const [content, setContent] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showSent, setShowSent] = useState(false)
-  const [linesCount, setLinesCount] = useState(4)
+  const [linesCount, setLinesCount] = useState(2)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const promptRef = useRef<HTMLDivElement>(null)
 
@@ -68,7 +68,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   return (
     <div className="border-t border-border pt-6 pb-6 px-6 max-h-[300px] overflow-hidden flex flex-col justify-end">
       <div className={`flex items-start gap-3 max-h-[250px] ${disabled ? 'opacity-50' : ''}`}>
-        <div 
+        <div
           ref={promptRef}
           className="flex flex-col text-xl select-none font-bold font-mono overflow-hidden pt-[17px] pb-3 max-h-[200px]"
         >
