@@ -44,12 +44,12 @@ function LocalGlitchText({
           progress >= 1
             ? text
             : target
-                .map((char, i) =>
-                  i < resolvedCount
-                    ? char
-                    : GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
-                )
-                .join('')
+              .map((char, i) =>
+                i < resolvedCount
+                  ? char
+                  : GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
+              )
+              .join('')
         )
 
         if (progress < 1) frameId = requestAnimationFrame(tick)
@@ -100,7 +100,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
           .select('*')
           .eq('bot', bot)
           .order('weight', { ascending: false })
-          .limit(17)
+          .limit(15)
 
         if (error) {
           setError(error.message)
