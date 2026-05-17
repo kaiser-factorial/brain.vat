@@ -19,7 +19,7 @@ function LocalGlitchText({ text, color, className = '' }: { text: string; color:
 
   useEffect(() => {
     const start = performance.now()
-    const duration = 800 // butter-smooth 800ms scramble
+    const duration = 3000 // butter-smooth 800ms scramble
     const target = text.split('')
     let frameId: number
     let lastTime = 0
