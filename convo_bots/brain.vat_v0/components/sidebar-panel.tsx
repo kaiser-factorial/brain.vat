@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { StabilityVitals } from './stability-vitals'
 import type { MemoryConcept, Bot } from '@/lib/types'
@@ -8,47 +8,67 @@ import { cn } from '@/lib/utils'
 
 const GLITCH_CHARS = '☠☣⚡⚠⚙⚙⌬⏃⏄⏅⏆⏇⏈⏉⏊⏋⏌⌥⎇✦✧■□▲▼○●'
 
-function LocalGlitchText({ text, color, className = '' }: { text: string; color: string; className?: string }) {
-  // Start with completely scrambled text on initial render!
-  const [display, setDisplay] = useState(() => {
-    return text
+function LocalGlitchText({
+  text,
+  color,
+  className = '',
+  delay = 0,
+}: {
+  text: string
+  color: string
+  className?: string
+  delay?: number
+}) {
+  const [display, setDisplay] = useState(() =>
+    text
       .split('')
       .map(() => GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)])
       .join('')
-  })
+  )
 
   useEffect(() => {
-    const start = performance.now()
-    const duration = 3000 // butter-smooth 800ms scramble
     const target = text.split('')
     let frameId: number
-    let lastTime = 0
+    let delayTimer: ReturnType<typeof setTimeout>
 
-    const tick = (now: number) => {
-      const elapsed = now - start
-      const progress = Math.min(1, elapsed / duration)
+    const startAnimation = () => {
+      const start = performance.now()
+      const duration = 900
 
-      // Throttle updates to ~15fps (every 66ms) to avoid layout thrashing with 34 items
-      if (now - lastTime >= 66 || progress === 1) {
-        lastTime = now
+      const tick = (now: number) => {
+        const elapsed = now - start
+        const progress = Math.min(1, elapsed / duration)
         const resolvedCount = Math.floor(progress * target.length)
-        const next = target
-          .map((char, index) => {
-            if (index < resolvedCount) return char
-            return GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
-          })
-          .join('')
-        setDisplay(next)
+
+        setDisplay(
+          progress >= 1
+            ? text
+            : target
+                .map((char, i) =>
+                  i < resolvedCount
+                    ? char
+                    : GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
+                )
+                .join('')
+        )
+
+        if (progress < 1) frameId = requestAnimationFrame(tick)
       }
 
-      if (progress < 1) {
-        frameId = requestAnimationFrame(tick)
-      }
+      frameId = requestAnimationFrame(tick)
     }
 
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [text])
+    if (delay > 0) {
+      delayTimer = setTimeout(startAnimation, delay)
+    } else {
+      startAnimation()
+    }
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      clearTimeout(delayTimer)
+    }
+  }, [text, delay])
 
   return (
     <span className={className} style={{ color }}>
@@ -132,7 +152,9 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
     }
   }, [supabase, bot])
 
-  // Mark concepts as "seen" after they've had a chance to animate
+  // Mark concepts as "seen" after the sequential glitch animation has finished.
+  // With 17 items × 100ms stagger + 900ms animation, the last item resolves at ~2500ms.
+  // 3200ms gives a comfortable buffer before switching to plain text.
   useEffect(() => {
     if (concepts.length > 0) {
       const newIds = concepts.map(c => c.id)
@@ -142,7 +164,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
           newIds.forEach(id => next.add(id))
           return next
         })
-      }, 2000)
+      }, 3200)
       return () => clearTimeout(timer)
     }
   }, [concepts])
@@ -192,7 +214,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         ) : concepts.length === 0 ? (
           <p className="text-sm text-muted-foreground italic animate-pulse font-mono">no memories yet</p>
         ) : (
-          concepts.map((concept) => {
+          concepts.map((concept, conceptIndex) => {
             const hasValidSource = sourceText &&
               sourceText !== 'recalling...' &&
               sourceText !== '(Context lost to time)' &&
@@ -222,7 +244,11 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                     'text-left'
                   )}>
                     {isNew ? (
-                      <LocalGlitchText text={concept.concept} color={isMAUK ? '#03A6A1' : '#FF9D23'} />
+                      <LocalGlitchText
+                        text={concept.concept}
+                        color={isMAUK ? '#03A6A1' : '#FF9D23'}
+                        delay={conceptIndex * 100}
+                      />
                     ) : (
                       concept.concept
                     )}
