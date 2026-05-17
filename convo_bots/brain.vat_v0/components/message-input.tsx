@@ -66,7 +66,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
 
   return (
     <div className="border-t border-border pt-6 pb-6 px-6">
-      <div className={`flex items-start gap-3 ${disabled ? 'opacity-50' : ''}`}>
+      <div className={`flex items-start gap-3 max-h-[300px] ${disabled ? 'opacity-50' : ''}`}>
         <div 
           ref={promptRef}
           className="flex flex-col text-xl select-none font-bold font-mono overflow-hidden pt-[17px] pb-3 max-h-[300px]"
