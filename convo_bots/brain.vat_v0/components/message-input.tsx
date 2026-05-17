@@ -13,7 +13,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   const [content, setContent] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showSent, setShowSent] = useState(false)
-  const [linesCount, setLinesCount] = useState(2)
+  const [linesCount, setLinesCount] = useState(1)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const promptRef = useRef<HTMLDivElement>(null)
 
@@ -39,8 +39,8 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
 
       // Calculate lines based on line-height (24px) and vertical padding (29px)
       const computedLines = Math.round((scrollHeight - 29) / 24)
-      // Cap the prompt indicators at a maximum of 8 to avoid visual bloating and match the 200px ceiling
-      setLinesCount(Math.min(8, Math.max(4, computedLines)))
+      // Cap the prompt indicators between 1 and 8 to match the height
+      setLinesCount(Math.min(8, Math.max(1, computedLines)))
     }
   }, [content])
 
@@ -83,14 +83,14 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
           placeholder={disabled ? "authentication required to speak..." : "speak to the vat..."}
-          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[125px] max-h-[200px] disabled:cursor-not-allowed pt-[17px] pb-3 text-base font-mono leading-[24px] overflow-y-auto"
-          rows={4}
+          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[53px] max-h-[200px] disabled:cursor-not-allowed pt-[17px] pb-3 text-base font-mono leading-[24px] overflow-y-auto"
+          rows={1}
           disabled={isSending || disabled}
         />
         {disabled ? (
           <button
             onClick={onAuthClick}
-            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[125px] flex items-center cursor-pointer"
+            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[53px] flex items-center cursor-pointer"
           >
             [authenticate]
           </button>
@@ -98,7 +98,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           <button
             onClick={handleSubmit}
             disabled={!content.trim() || isSending}
-            className="text-terminal-green hover:text-terminal-green/70 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-7 min-w-[140px] min-h-[125px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[5px]"
+            className="text-terminal-green hover:text-terminal-green/70 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-7 min-w-[140px] min-h-[53px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[5px]"
           >
             <div className="font-black tracking-tighter pointer-events-none scale-[2.1] origin-center">
               <GlitchText
