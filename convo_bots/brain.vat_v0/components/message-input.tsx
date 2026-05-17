@@ -13,6 +13,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   const [content, setContent] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showSent, setShowSent] = useState(false)
+  const [linesCount, setLinesCount] = useState(4)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -24,7 +25,12 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`
+      const scrollHeight = inputRef.current.scrollHeight
+      inputRef.current.style.height = `${scrollHeight}px`
+
+      // Calculate lines based on line-height (24px) and vertical padding (29px)
+      const computedLines = Math.round((scrollHeight - 29) / 24)
+      setLinesCount(Math.max(4, computedLines))
     }
   }, [content])
 
@@ -53,7 +59,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
     <div className="border-t border-border pt-6 pb-6 px-6">
       <div className={`flex items-start gap-3 ${disabled ? 'opacity-50' : ''}`}>
         <div className="flex flex-col text-xl leading-[24px] select-none font-bold mt-3 translate-y-[2px] font-mono">
-          {Array.from({ length: Math.max(4, content.split('\n').length) }).map((_, i) => (
+          {Array.from({ length: linesCount }).map((_, i) => (
             <span key={i} className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
           ))}
         </div>
@@ -62,7 +68,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           value={content}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "authentication required to speak..." : "speak into the void..."}
+          placeholder={disabled ? "authentication required to speak..." : "speak to the vat..."}
           className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[125px] max-h-[320px] disabled:cursor-not-allowed pt-[17px] pb-3 text-base font-mono leading-[24px] overflow-y-auto"
           rows={4}
           disabled={isSending || disabled}
