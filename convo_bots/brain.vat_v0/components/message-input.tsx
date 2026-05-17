@@ -33,7 +33,9 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
       const scrollHeight = inputRef.current.scrollHeight
-      inputRef.current.style.height = `${scrollHeight}px`
+      // Cap the inline style height at 300px to prevent the flex container from growing indefinitely
+      const cappedHeight = Math.min(300, scrollHeight)
+      inputRef.current.style.height = `${cappedHeight}px`
 
       // Calculate lines based on line-height (24px) and vertical padding (29px)
       const computedLines = Math.round((scrollHeight - 29) / 24)
