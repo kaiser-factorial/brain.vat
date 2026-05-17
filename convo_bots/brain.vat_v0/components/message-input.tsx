@@ -33,8 +33,8 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
       const scrollHeight = inputRef.current.scrollHeight
-      // Cap the inline style height at 300px to prevent the flex container from growing indefinitely
-      const cappedHeight = Math.min(300, scrollHeight)
+      // Cap the inline style height at 200px to prevent the flex container from growing indefinitely
+      const cappedHeight = Math.min(200, scrollHeight)
       inputRef.current.style.height = `${cappedHeight}px`
 
       // Calculate lines based on line-height (24px) and vertical padding (29px)
@@ -65,11 +65,11 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   }
 
   return (
-    <div className="border-t border-border pt-6 pb-6 px-6">
-      <div className={`flex items-start gap-3 max-h-[300px] ${disabled ? 'opacity-50' : ''}`}>
+    <div className="border-t border-border pt-6 pb-6 px-6 max-h-[300px] overflow-hidden flex flex-col justify-end">
+      <div className={`flex items-start gap-3 max-h-[250px] ${disabled ? 'opacity-50' : ''}`}>
         <div 
           ref={promptRef}
-          className="flex flex-col text-xl select-none font-bold font-mono overflow-hidden pt-[17px] pb-3 max-h-[300px]"
+          className="flex flex-col text-xl select-none font-bold font-mono overflow-hidden pt-[17px] pb-3 max-h-[200px]"
         >
           {Array.from({ length: linesCount }).map((_, i) => (
             <span key={i} className={`h-6 leading-6 ${disabled ? 'text-primary' : 'text-terminal-green'}`}>{`>`}</span>
@@ -82,7 +82,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
           placeholder={disabled ? "authentication required to speak..." : "speak to the vat..."}
-          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[125px] max-h-[300px] disabled:cursor-not-allowed pt-[17px] pb-3 text-base font-mono leading-[24px] overflow-y-auto"
+          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[125px] max-h-[200px] disabled:cursor-not-allowed pt-[17px] pb-3 text-base font-mono leading-[24px] overflow-y-auto"
           rows={4}
           disabled={isSending || disabled}
         />
