@@ -1,11 +1,61 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { StabilityVitals } from './stability-vitals'
 import type { MemoryConcept, Bot } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { GlitchText } from 'ccru/components'
+
+const GLITCH_CHARS = '☠☣⚡⚠⚙⚙⌬⏃⏄⏅⏆⏇⏈⏉⏊⏋⏌⌥⎇✦✧■□▲▼○●'
+
+function LocalGlitchText({ text, color, className = '' }: { text: string; color: string; className?: string }) {
+  // Start with completely scrambled text on initial render!
+  const [display, setDisplay] = useState(() => {
+    return text
+      .split('')
+      .map(() => GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)])
+      .join('')
+  })
+
+  useEffect(() => {
+    const start = performance.now()
+    const duration = 800 // butter-smooth 800ms scramble
+    const target = text.split('')
+    let frameId: number
+    let lastTime = 0
+
+    const tick = (now: number) => {
+      const elapsed = now - start
+      const progress = Math.min(1, elapsed / duration)
+
+      // Throttle updates to ~15fps (every 66ms) to avoid layout thrashing with 34 items
+      if (now - lastTime >= 66 || progress === 1) {
+        lastTime = now
+        const resolvedCount = Math.floor(progress * target.length)
+        const next = target
+          .map((char, index) => {
+            if (index < resolvedCount) return char
+            return GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
+          })
+          .join('')
+        setDisplay(next)
+      }
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(tick)
+      }
+    }
+
+    frameId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameId)
+  }, [text])
+
+  return (
+    <span className={className} style={{ color }}>
+      {display}
+    </span>
+  )
+}
 
 interface SidebarPanelProps {
   owner: 'MAUK' | 'ABACI'
@@ -169,7 +219,7 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
                     'text-left'
                   )}>
                     {isNew ? (
-                      <GlitchText text={concept.concept} color={isMAUK ? '#03A6A1' : '#FF9D23'} />
+                      <LocalGlitchText text={concept.concept} color={isMAUK ? '#03A6A1' : '#FF9D23'} />
                     ) : (
                       concept.concept
                     )}
