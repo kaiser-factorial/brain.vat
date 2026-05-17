@@ -45,7 +45,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   return (
     <div className="border-t border-border pt-6 pb-6 px-6">
       <div className={`flex items-start gap-3 ${disabled ? 'opacity-50' : ''}`}>
-        <div className="flex flex-col text-xl leading-[18px] select-none font-bold translate-y-[5px] gap-2">
+        <div className="flex flex-col text-xl leading-[24px] select-none font-bold mt-3 translate-y-[2px]">
           <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
           <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
           <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
@@ -57,14 +57,14 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "authentication required to speak..." : "speak into the void..."}
-          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[60px] max-h-[160px] disabled:cursor-not-allowed pt-2 text-base font-mono leading-[24px]"
-          rows={2}
+          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[120px] max-h-[200px] disabled:cursor-not-allowed py-3 text-base font-mono leading-[24px]"
+          rows={4}
           disabled={isSending || disabled}
         />
         {disabled ? (
           <button
             onClick={onAuthClick}
-            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[60px] flex items-center cursor-pointer"
+            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[120px] flex items-center cursor-pointer"
           >
             [authenticate]
           </button>
@@ -72,7 +72,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           <button
             onClick={handleSubmit}
             disabled={!content.trim() || isSending}
-            className="text-terminal-green hover:text-terminal-green/70 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-7 min-w-[140px] min-h-[80px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[5px]"
+            className="text-terminal-green hover:text-terminal-green/70 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-7 min-w-[140px] min-h-[120px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[5px]"
           >
             <div className="font-black tracking-tighter pointer-events-none scale-[2.1] origin-center">
               <GlitchText
