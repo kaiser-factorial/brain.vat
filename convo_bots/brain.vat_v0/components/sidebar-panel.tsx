@@ -88,6 +88,9 @@ export function SidebarPanel({ owner, side }: SidebarPanelProps) {
         }
 
         if (data) {
+          if (isInitial) {
+            await new Promise(resolve => setTimeout(resolve, 1200))
+          }
           setConcepts(data)
           setError(null)
         }
