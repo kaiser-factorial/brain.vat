@@ -13,7 +13,18 @@ import { NeonDivider, CyberButton, CyberButtonGroup, CyberCheckbox } from 'ccru/
 import { useRouter, usePathname } from 'next/navigation'
 
 function SystemStatusIndicator() {
-  const { isOnline, isLoopActive } = useSystemStatus()
+  const { isOnline, isLoopActive, isInitializing } = useSystemStatus()
+
+  if (isInitializing) {
+    return (
+      <div className="flex items-center gap-2 group cursor-default">
+        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase text-amber-500/80 font-bold">
+          SYSTEM STATUS: CONNECTING
+        </span>
+      </div>
+    )
+  }
 
   if (!isOnline) {
     return (

@@ -9,7 +9,16 @@ interface StabilityVitalsProps {
 }
 
 export function StabilityVitals({ bot, className }: StabilityVitalsProps) {
-  const { isOnline, settings } = useSystemStatus()
+  const { isOnline, settings, isInitializing } = useSystemStatus()
+
+  if (isInitializing) {
+    return (
+      <div className={cn("flex items-center gap-1 font-mono text-[10px] uppercase opacity-30", className)}>
+        <span className="text-muted-foreground mr-2">connection:</span>
+        <span className="text-amber-500 font-bold animate-pulse">connecting_</span>
+      </div>
+    )
+  }
 
   if (!isOnline || !settings) {
     return (
