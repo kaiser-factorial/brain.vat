@@ -21,6 +21,13 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
     }
   }, [disabled])
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`
+    }
+  }, [content])
+
   const handleSubmit = async () => {
     if (!content.trim() || isSending || disabled) return
 
@@ -45,11 +52,10 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
   return (
     <div className="border-t border-border pt-6 pb-6 px-6">
       <div className={`flex items-start gap-3 ${disabled ? 'opacity-50' : ''}`}>
-        <div className="flex flex-col text-xl leading-[24px] select-none font-bold mt-3 translate-y-[2px]">
-          <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
-          <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
-          <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
-          <span className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
+        <div className="flex flex-col text-xl leading-[24px] select-none font-bold mt-3 translate-y-[2px] font-mono">
+          {Array.from({ length: Math.max(4, content.split('\n').length) }).map((_, i) => (
+            <span key={i} className={disabled ? 'text-primary' : 'text-terminal-green'}>{`>`}</span>
+          ))}
         </div>
         <textarea
           ref={inputRef}
@@ -57,14 +63,14 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "authentication required to speak..." : "speak into the void..."}
-          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[120px] max-h-[200px] disabled:cursor-not-allowed py-3 text-base font-mono leading-[24px]"
+          className="flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-h-[125px] max-h-[320px] disabled:cursor-not-allowed pt-[17px] pb-3 text-base font-mono leading-[24px] overflow-y-auto"
           rows={4}
           disabled={isSending || disabled}
         />
         {disabled ? (
           <button
             onClick={onAuthClick}
-            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[120px] flex items-center cursor-pointer"
+            className="text-user hover:underline transition-colors whitespace-nowrap pt-2 text-sm uppercase tracking-widest min-h-[125px] flex items-center cursor-pointer"
           >
             [authenticate]
           </button>
@@ -72,7 +78,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           <button
             onClick={handleSubmit}
             disabled={!content.trim() || isSending}
-            className="text-terminal-green hover:text-terminal-green/70 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-7 min-w-[140px] min-h-[120px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[5px]"
+            className="text-terminal-green hover:text-terminal-green/70 disabled:opacity-30 transition-all pt-1 hover:drop-shadow-[0_0_20px_rgba(16,255,80,1)] active:scale-90 px-7 min-w-[140px] min-h-[125px] flex items-center justify-center border-l border-border/20 ml-4 cursor-pointer disabled:cursor-not-allowed translate-x-[5px]"
           >
             <div className="font-black tracking-tighter pointer-events-none scale-[2.1] origin-center">
               <GlitchText
