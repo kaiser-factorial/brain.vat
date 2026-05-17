@@ -72,7 +72,7 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
           ref={promptRef}
           className="flex flex-col text-xl select-none font-bold font-mono overflow-hidden pt-[17px] pb-3 max-h-[200px]"
         >
-          {Array.from({ length: linesCount }).map((_, i) => (
+          {Array.from({ length: Math.min(8, linesCount) }).map((_, i) => (
             <span key={i} className={`h-6 leading-6 ${disabled ? 'text-primary' : 'text-terminal-green'}`}>{`>`}</span>
           ))}
         </div>
