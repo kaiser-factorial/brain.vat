@@ -39,7 +39,8 @@ export function MessageInput({ onSend, disabled, onAuthClick }: MessageInputProp
 
       // Calculate lines based on line-height (24px) and vertical padding (29px)
       const computedLines = Math.round((scrollHeight - 29) / 24)
-      setLinesCount(Math.max(4, computedLines))
+      // Cap the prompt indicators at a maximum of 8 to avoid visual bloating and match the 200px ceiling
+      setLinesCount(Math.min(8, Math.max(4, computedLines)))
     }
   }, [content])
 
