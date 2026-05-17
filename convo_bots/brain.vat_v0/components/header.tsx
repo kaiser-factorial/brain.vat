@@ -138,7 +138,7 @@ export function Header({ onAuthClick }: HeaderProps) {
         </div>
 
         {/* Bottom Section: Status, Description & Operator Toggles */}
-        <div className="flex flex-col items-center mt-0 relative z-10 -translate-y-[5px]">
+        <div className="flex flex-col items-center mt-0 relative z-10 -translate-y-[5px] pointer-events-none">
           <div className="-mt-3.5 mb-1.5">
             <SystemStatusIndicator />
           </div>
@@ -155,7 +155,7 @@ export function Header({ onAuthClick }: HeaderProps) {
 
             <div className="flex-1 flex justify-end">
               {user && (
-                <div className="flex items-center gap-3 scale-110 origin-right -translate-y-[3px]">
+                <div className="flex items-center gap-3 scale-110 origin-right -translate-y-[3px] pointer-events-auto">
                   <CyberCheckbox
                     checked={byobActive}
                     onChange={openBYOB}
