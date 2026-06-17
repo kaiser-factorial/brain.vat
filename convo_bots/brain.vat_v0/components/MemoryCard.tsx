@@ -200,8 +200,8 @@ export function MemoryColumn({
       {/* Column Header with indicator dots */}
       <div
         className={cn(
-          'text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2',
-          align === 'right' && 'flex-row-reverse justify-end',
+          'text-sm font-bold mb-4 uppercase tracking-tighter flex items-center gap-2 w-full',
+          align === 'right' && 'justify-end',
           align === 'center' && 'justify-center'
         )}
         style={{ color: accentColor }}>
@@ -222,7 +222,7 @@ export function MemoryColumn({
         {showIndicator && (align === 'right' || align === 'center') && (
           <div
             className={cn(
-              'w-2 h-2 rounded-full',
+              'w-2 h-2 rounded-full flex-shrink-0',
               animationType === 'ping' ? 'animate-ping' : 'animate-pulse'
             )}
             style={{
@@ -234,7 +234,7 @@ export function MemoryColumn({
 
       {/* Items */}
       <div className={cn(
-        'flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin min-h-[300px]',
+        'flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin',
         align === 'center' && 'text-center',
         align === 'right' && 'text-right'
       )}>
