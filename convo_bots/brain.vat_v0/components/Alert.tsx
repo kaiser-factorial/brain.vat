@@ -198,7 +198,7 @@ function CompactAlert({
       <span className="text-lg flex-shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-mono text-foreground/80">
-          <span style={{ color }} className="font-bold">
+          <span style={{ color }} >
             {title}:
           </span>{' '}
           {typeof message === 'string' ? message : <>{message}</>}

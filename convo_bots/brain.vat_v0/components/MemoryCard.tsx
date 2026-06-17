@@ -249,8 +249,7 @@ export function MemoryColumn({
             showDot={false}
             isHovering={hoveredItem === item}
             sourceText={hoveredItem === item ? sourceText : undefined}
-            onMouseEnter={() => onItemHover?.(item)}
-          />
+            />
         ))}
       </div>
     </div>

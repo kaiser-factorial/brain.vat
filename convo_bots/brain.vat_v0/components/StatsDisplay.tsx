@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from "react"
 import { cn } from '@/lib/utils'
 import { ReactNode } from 'react'
 
@@ -56,6 +57,7 @@ interface StatCardProps {
   accentColor: string
 }
 
+
 function StatCard({ stat, accentColor }: StatCardProps) {
   const changeColor =
     stat.changeType === 'positive' ? '#00ff41' :
@@ -64,13 +66,16 @@ function StatCard({ stat, accentColor }: StatCardProps) {
     stat.changeType === 'stable' ? '#00ccff' :
     '#808080'
 
+    
   return (
     <div
-      className="backdrop-blur-md border rounded-lg p-4 flex-shrink-0 transition-all group hover:border-opacity-100"
+      className="backdrop-blur-md border rounded-lg p-4 flex-shrink-0 transition-all cursor-default"
       style={{
-        borderColor: accentColor,
+        borderColor: isHovering ? lightenColor(accentColor, 40) : accentColor,
         backgroundColor: `${accentColor}15`,
-      }}>
+        transition: 'border-color 200ms ease',
+      }}
+      >
       <div className="flex items-start justify-between gap-2">
         {/* Icon and label */}
         <div className="flex-1 min-w-0">
