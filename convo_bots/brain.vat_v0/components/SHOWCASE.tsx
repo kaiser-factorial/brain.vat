@@ -197,10 +197,10 @@ export function ComponentShowcase() {
           <h2 className="text-2xl font-bold text-abaci uppercase tracking-widest">Metrics & Stats</h2>
           <StatsDisplay
             stats={[
-              { label: 'Active Sessions', value: '1,247', change: '+12', changeType: 'positive', icon: '👥', color: '#03A6A1' },
-              { label: 'Data Processed', value: '2.3GB', change: '+0.1GB', changeType: 'positive', icon: '💾', color: '#FF9D23' },
-              { label: 'Error Rate', value: '0.02%', change: '-0.01%', changeType: 'positive', icon: '⚠', color: '#00ff41' },
-              { label: 'Uptime', value: '99.9%', change: 'stable', changeType: 'neutral', icon: '⏱', color: '#00ccff' },
+              { label: 'Active Sessions', value: '1,247', change: '--12', changeType: 'negative', icon: '◉◉', color: '#03A6A1' },
+              { label: 'Data Processed', value: '2.3GB', change: '+0.1GB', changeType: 'positive', icon: '▯▮', color: '#FF9D23' },
+              { label: 'Error Rate', value: '0.02%', change: '±0.01%', changeType: 'warning', icon: '⚠', color: '#00ff41' },
+              { label: 'Uptime', value: '99.9%', change: 'stable', changeType: 'stable', icon: '⏱', color: '#00ccff' },
             ]}
             columns={4}
           />

@@ -7,7 +7,7 @@ export interface Stat {
   label: string
   value: string | number
   change?: string | number
-  changeType?: 'positive' | 'negative' | 'neutral'
+  changeType?: 'positive' | 'negative' | 'neutral' | 'warning' | 'stable'
   icon?: string
   color?: string
 }
@@ -60,6 +60,8 @@ function StatCard({ stat, accentColor }: StatCardProps) {
   const changeColor =
     stat.changeType === 'positive' ? '#00ff41' :
     stat.changeType === 'negative' ? '#ff4444' :
+    stat.changeType === 'warning' ? '#FFD700' :
+    stat.changeType === 'stable' ? '#00ccff' :
     '#808080'
 
   return (
