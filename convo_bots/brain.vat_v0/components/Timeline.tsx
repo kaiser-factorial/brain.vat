@@ -111,7 +111,8 @@ function TimelineEventNode({
           style={{
             borderColor: accentColor,
             backgroundColor: `${accentColor}15`,
-          }}>
+          }}
+          className="hover:border-opacity-100 transition-all group/card">
           {/* Title */}
           <h3
             className="text-sm font-bold uppercase tracking-wide mb-2"

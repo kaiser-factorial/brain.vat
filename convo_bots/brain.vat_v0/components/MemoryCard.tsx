@@ -192,7 +192,7 @@ export function MemoryColumn({
 }: MemoryColumnProps) {
   return (
     <div
-      className="flex flex-col border p-4 rounded-sm"
+      className="flex flex-col border p-4 rounded-sm transition-all group hover:border-opacity-100"
       style={{
         borderColor: accentColor,
         backgroundColor: `${accentColor}15`,

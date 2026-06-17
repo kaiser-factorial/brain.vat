@@ -66,7 +66,7 @@ function StatCard({ stat, accentColor }: StatCardProps) {
 
   return (
     <div
-      className="backdrop-blur-md border rounded-lg p-4 flex-shrink-0"
+      className="backdrop-blur-md border rounded-lg p-4 flex-shrink-0 transition-all group hover:border-opacity-100"
       style={{
         borderColor: accentColor,
         backgroundColor: `${accentColor}15`,
