@@ -1,4 +1,4 @@
-import { ComponentShowcase } from '@/../../cyber_theme/components/SHOWCASE'
+import { ComponentShowcase } from '@/components/SHOWCASE'
 
 export default function ShowcasePage() {
   return <ComponentShowcase />
