@@ -44,10 +44,7 @@ export function TechnicalSchematic({
   }[columns]
 
   const containerClasses = cn(
-    'p-1 rounded-lg overflow-hidden backdrop-blur-sm',
-    layout === 'grid' && `grid gap-1 ${gridColsClasses}`,
-    layout === 'row' && 'space-y-1',
-    showBorder && 'border',
+    'grid gap-1 grid-cols-2 md:grid-cols-4 p-1 rounded-lg overflow-hidden backdrop-blur-sm border',
     className
   )
 
@@ -55,8 +52,7 @@ export function TechnicalSchematic({
     <section className="space-y-4">
       {title && (
         <h3
-          className="text-xl font-bold mb-6 tracking-tighter uppercase"
-          style={{ color: accentColor }}>
+          className="text-xl font-bold mb-6 tracking-tighter uppercase text-[#00FF00]">
           {title}
         </h3>
       )}
@@ -64,8 +60,8 @@ export function TechnicalSchematic({
       <div
         className={containerClasses}
         style={{
-          backgroundColor: `${accentColor}15`,
-          borderColor: accentColor,
+          backgroundColor: '#00FF00' + '10',
+          borderColor: '#00FF00' + '/35',
         }}>
         {items.map((item) => (
           <SchematicItemCard
@@ -97,36 +93,24 @@ function SchematicItemCard({
   return (
     <div
       className={cn(
-        'bg-black/40 p-4 transition-colors',
-        interactive && 'hover:bg-terminal-green/5 cursor-pointer',
+        'bg-black/40 p-4 hover:bg-terminal-green/5 transition-colors group',
         className
       )}>
       {/* Component Name */}
       <div
-        className="text-[10px] uppercase tracking-[0.2em] mb-1 font-bold opacity-40"
-        style={{ color: accentColor }}>
+        className="text-[10px] text-[#00FF00]/40 uppercase tracking-[0.2em] mb-1 font-bold">
         {item.component}
       </div>
 
       {/* Location */}
       <div
-        className="text-xs font-bold mb-2 tracking-wide uppercase transition-colors"
-        style={{
-          color: accentColor,
-        }}>
-        {item.icon && <span className="mr-1">{item.icon}</span>}
+        className="text-xs font-bold text-[#00FF00] mb-2 tracking-wide group-hover:text-white transition-colors uppercase">
         {item.location}
       </div>
 
       {/* Role */}
-      <div className="text-[10px] font-mono text-muted-foreground opacity-85 tracking-wider font-bold">
-        <span
-          style={{
-            borderBottomColor: `${accentColor}33`,
-          }}
-          className="pb-1 border-b">
-          {item.role}
-        </span>
+      <div className="text-[10px] font-mono text-muted-foreground opacity-85 tracking-wider font-bold underline decoration-primary/20">
+        {item.role}
       </div>
     </div>
   )
@@ -135,10 +119,10 @@ function SchematicItemCard({
 // Brain.vat preset: System architecture
 export function BrainVatSystemArchitecture(props?: Omit<TechnicalSchematicProps, 'items'>) {
   const items: SchematicItem[] = [
-    { component: 'BRAIN', role: 'Inference Engine', location: 'Hugging Face', icon: '🧠' },
-    { component: 'SPINE', role: 'Protocol API', location: 'Python/Flask', icon: '🔗' },
-    { component: 'MEMORY', role: 'Persistence', location: 'Supabase', icon: '💾' },
-    { component: 'INTERFACE', role: 'Control Panel', location: 'Next.js', icon: '🎛️' },
+    { component: 'BRAIN', role: 'Inference Engine', location: 'Hugging Face' },
+    { component: 'SPINE', role: 'Protocol API', location: 'Python/Flask' },
+    { component: 'MEMORY', role: 'Persistence', location: 'Supabase' },
+    { component: 'INTERFACE', role: 'Control Panel', location: 'Next.js' },
   ]
 
   return (
