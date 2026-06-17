@@ -69,11 +69,10 @@ function StatCard({ stat, accentColor }: StatCardProps) {
     
   return (
     <div
-      className="backdrop-blur-md border rounded-lg p-4 flex-shrink-0 transition-all cursor-default"
+      className="backdrop-blur-md border rounded-lg p-4 flex-shrink-0 transition-all hover:shadow-lg"
       style={{
-        borderColor: isHovering ? lightenColor(accentColor, 40) : accentColor,
+        borderColor: accentColor,
         backgroundColor: `${accentColor}15`,
-        transition: 'border-color 200ms ease',
       }}
       >
       <div className="flex items-start justify-between gap-2">
