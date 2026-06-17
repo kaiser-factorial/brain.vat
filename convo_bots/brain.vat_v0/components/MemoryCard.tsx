@@ -67,11 +67,11 @@ export function MemoryCard({
     sourceText !== '(error recalling)' &&
     sourceText !== '(Source unavailable — offline mode)'
 
-  // Determine alignment and origin for scale
+  // Determine alignment and flex direction
   const alignClass = {
-    left: 'text-left origin-left',
-    center: 'text-center origin-center',
-    right: 'text-right origin-right',
+    left: 'justify-start origin-left',
+    center: 'justify-center origin-center',
+    right: 'justify-end origin-right',
   }[align]
 
   // Animation class
