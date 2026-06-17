@@ -170,18 +170,19 @@ function PulseSpinner({
     <div className={cn('flex flex-col items-center gap-3', className)}>
       <div className={cn('relative', sizeClasses)}>
         <div
-          className={cn('absolute inset-0 rounded-full animate-pulse', sizeClasses)}
+          className={cn('absolute inset-0 rounded-full', sizeClasses)}
           style={{
             backgroundColor: accentColor,
             opacity: 0.7,
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
           }}
         />
         <div
-          className={cn('absolute inset-0 rounded-full animate-pulse', sizeClasses)}
+          className={cn('absolute inset-0 rounded-full', sizeClasses)}
           style={{
             backgroundColor: accentColor,
             opacity: 0.4,
-            animationDelay: '1s',
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite 1s',
           }}
         />
       </div>
