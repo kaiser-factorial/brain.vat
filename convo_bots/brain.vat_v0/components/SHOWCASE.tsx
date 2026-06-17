@@ -297,12 +297,12 @@ export function ComponentShowcase() {
             bots={[
               {
                 name: 'MAUK_v2.1',
-                description: 'Left-brain processor specializing in logical analysis and structured reasoning',
+                description: 'Trained on surrealist philosophy and injected with math. Optimized on 2010 twitter data.',
                 accentColor: '#03A6A1',
               },
               {
                 name: 'ABACI_v2.1',
-                description: 'Right-brain processor focused on creative synthesis and pattern recognition',
+                description: 'Trained on math and injected with surrealist poetry. Optimized on 2010 twitter data.',
                 accentColor: '#FF9D23',
               },
             ]}

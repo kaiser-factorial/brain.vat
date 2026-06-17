@@ -53,8 +53,9 @@ export function BotNameCard({
   return (
     <div
       className={cn(
-        'backdrop-blur-md border rounded-lg relative overflow-hidden',
-        interactive && 'group hover:transition-all cursor-default',
+        'backdrop-blur-md border rounded-lg relative overflow-hidden transition-all',
+        sizeClasses,
+        interactive && 'group hover:border-opacity-100 cursor-default',
         className
       )}
       style={{
@@ -74,28 +75,25 @@ export function BotNameCard({
         />
       )}
 
-      <div className="relative z-10">
-        {/* Bot Name */}
-        <h2
-          className={cn(
-            'font-bold mb-4 uppercase tracking-wide',
-            titleSizeClasses,
-            interactive && 'group-hover:transition-colors'
-          )}
-          style={{ color: accentColor }}>
-          {botName}
-          {version && <span className="opacity-60">_{version}</span>}
-        </h2>
+      {/* Bot Name */}
+      <h2
+        className={cn(
+          'font-bold mb-4 uppercase tracking-wide relative z-10',
+          titleSizeClasses
+        )}
+        style={{ color: accentColor }}>
+        {botName}
+        {version && <span className="opacity-60">_{version}</span>}
+      </h2>
 
-        {/* Description */}
-        <p
-          className={cn(
-            'text-foreground/80 leading-relaxed font-mono',
-            textSizeClasses
-          )}>
-          {description}
-        </p>
-      </div>
+      {/* Description */}
+      <p
+        className={cn(
+          'text-foreground/80 leading-relaxed font-mono relative z-10',
+          textSizeClasses
+        )}>
+        {description}
+      </p>
 
       {/* Hover border effect */}
       {interactive && (
