@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bot Lexicon — MapReduce Visualizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0D1117;
+      color: #C8CBD8;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: #0a120d;
+      border-bottom: 1px solid #21262D;
+      flex-shrink: 0;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    #header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #E6EDF3;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      margin-top: 25px;
+    }
+    #header h1 span.mauk  { color: #03A6A1; }
+    #header h1 span.abaci { color: #FF9D23; }
+    .btn {
+      background: #21262D;
+      border: 1px solid #30363D;
+      color: #C8CBD8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn:hover { background: #2D333B; border-color: #444C56; }
+    .btn.active { background: rgba(201, 51, 62, 0.15); border-color: #C9333E; color: #C9333E; }
+    .btn-vat { 
+      position: fixed; top: 10px; right: 24px; z-index: 5000;
+      background: rgba(230, 57, 70, 0.1); 
+      color: #FF5C67; 
+      border: 1px solid #E63946; 
+      font-weight: 700; 
+      box-shadow: 0 0 15px rgba(230, 57, 70, 0.2);
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .btn-vat:hover { 
+      background: rgba(230, 57, 70, 0.2); 
+      color: #FF8089; 
+      transform: scale(1.02); 
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.4);
+    }
+    .btn-quiet { background: transparent; border: 1px solid #30363D; color: #8B949E; }
+    .btn-quiet:hover { color: #C8CBD8; border-color: #444C56; }
+    .btn#btn-play { min-width: 72px; }
+    .filter-group { display: flex; gap: 4px; }
+    .filter-btn {
+      background: #21262D;
+      border: 1px solid #30363D;
+      color: #8B949E;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover { color: #C8CBD8; border-color: #444C56; }
+    .filter-btn.active-all    { background: rgba(0, 230, 120, 0.15); border-color: #00E678; color: #00E678; }
+    .filter-btn.active-mauk   { background:#03A6A122; border-color:#03A6A1; color:#03A6A1; }
+    .filter-btn.active-abaci  { background:#FF9D2322; border-color:#FF9D23; color:#FF9D23; }
+    .filter-btn.active-shared { background: rgba(201, 51, 62, 0.15); border-color: #C9333E; color: #C9333E; }
+    .speed-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #8B949E;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    #speed-slider {
+      -webkit-appearance: none;
+      width: 80px; height: 4px;
+      border-radius: 2px;
+      background: #30363D;
+      outline: none;
+    }
+    #speed-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #C9333E;
+      cursor: pointer;
+    }
+    .stats {
+      display: flex;
+      gap: 16px;
+      font-size: 11px;
+      color: #8B949E;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stats span { white-space: nowrap; }
+    .stats span b { color: #C8CBD8; }
+    #canvas-container { flex: 1; overflow: hidden; position: relative; }
+    #canvas-container canvas { display: block; }
+
+    /* Modal Styles */
+    #modal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(13, 17, 23, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #modal {
+      background: #161B22;
+      border: 1px solid #30363D;
+      border-radius: 12px;
+      padding: 32px;
+      width: 440px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    #modal h2 {
+      color: #00E678;
+      font-size: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .modal-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+    .modal-stats div b { color: #E6EDF3; }
+    .modal-btns {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .modal-btn {
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .modal-btn-primary {
+      background: #00E678;
+      color: #0D1117;
+      border: none;
+    }
+    .modal-btn-primary:hover {
+      background: #00C868;
+    }
+
+    #loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #0D1117;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #30363D;
+      border-top-color: #00E678;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div style="flex: 0 0 300px;">
+    <h1>MapReduce — <span class="mauk">MAUK</span> × <span class="abaci">ABACI</span> Lexicon</h1>
+  </div>
+  
+  <div class="controls">
+    <div class="controls-row">
+      <button class="btn" id="btn-play">⏸ Pause</button>
+      <button class="btn" id="btn-reset">↺ Reset</button>
+      <button class="btn" id="btn-bucket">⬡ Bucket Mode</button>
+      <div class="filter-group">
+        <button class="filter-btn active-all" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="shared">Shared</button>
+        <button class="filter-btn" data-filter="mauk_only">MAUK</button>
+        <button class="filter-btn" data-filter="abaci_only">ABACI</button>
+      </div>
+      <div class="speed-wrap">
+        <span>Speed</span>
+        <input type="range" id="speed-slider" min="0.3" max="8" step="0.1" value="2.5">
+        <span id="speed-label">2.5×</span>
+      </div>
+    </div>
+    <div class="controls-row">
+      <div class="stats">
+        <span>Map outputs: <b id="stat-mapped">0</b></span>
+        <span>Unique keys reduced: <b id="stat-reduced">0</b></span>
+        <span>Queue: <b id="stat-queue">0</b></span>
+      </div>
+      <div style="display:flex; gap:8px; margin-left:12px; border-left:1px solid #30363D; padding-left:12px;">
+        <button class="btn btn-quiet" onclick="window.location.href='/lexicon/results.html'">Results</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; border-left:1px solid #30363D; padding-left:12px; margin-left:12px; font-family: 'JetBrains Mono', monospace;">
+        <span style="font-size:11px; color:#8B949E;">Limit:</span>
+        <select id="limit-select" style="background:#0D1117; border:1px solid #30363D; color:#E6EDF3; font-size:11px; border-radius:4px; padding:2px 4px; outline:none; cursor:pointer; font-family: 'JetBrains Mono', monospace;">
+          <option value="all">All</option>
+          <option value="30000">30k</option>
+          <option value="10000">10k</option>
+          <option value="1000" selected>1k</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 0 0 300px;"></div> <!-- Spacer to center the controls -->
+  
+  <button class="btn btn-vat" onclick="window.location.href='/'">Enter the VAT</button>
+</div>
+
+<div id="canvas-container">
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading vocabulary...</p>
+  </div>
+  <div id="modal-overlay">
+    <div id="modal">
+      <h2>✓ All words reduced</h2>
+      <div class="modal-stats" id="modal-stats-content">
+        <!-- populated by js -->
+      </div>
+      <div class="modal-btns">
+        <button class="btn modal-btn" onclick="resetSim(); hideModal();">↺ Loop again</button>
+        <button class="btn modal-btn modal-btn-primary" onclick="window.location.href='results.html'">→ Inspect Results</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let ALL_WORDS = [];
+let STATS = {};
+
+async function loadData() {
+  const [wRes, sRes] = await Promise.all([
+    fetch('words.json'),
+    fetch('stats.json')
+  ]);
+  ALL_WORDS = await wRes.json();
+  STATS     = await sRes.json();
+  document.getElementById('loading-overlay').style.display = 'none';
+  resetSim();
+}
+
+// ── UI controls ───────────────────────────────────────────────────────────────
+let paused     = false;
+let speedMult  = 2.5;
+let filterMode = 'all';
+let bucketMode = false;
+let laneParkedCounts = {}; 
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  paused = !paused;
+  document.getElementById('btn-play').textContent = paused ? '▶ Play' : '⏸ Pause';
+});
+document.getElementById('btn-reset').addEventListener('click', () => { resetSim(); hideModal(); });
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.className = 'filter-btn');
+    filterMode = btn.dataset.filter;
+    const cls = filterMode === 'all' ? 'active-all'
+              : filterMode === 'shared' ? 'active-shared'
+              : filterMode === 'mauk_only' ? 'active-mauk' : 'active-abaci';
+    btn.classList.add(cls);
+    resetSim();
+  });
+});
+
+document.getElementById('btn-bucket').addEventListener('click', () => {
+  bucketMode = !bucketMode;
+  const btn = document.getElementById('btn-bucket');
+  btn.classList.toggle('active', bucketMode);
+  btn.textContent = bucketMode ? '⬡ Bucketed' : '⬡ Bucket Mode';
+  if (!bucketMode) {
+    for (const pt of simParticles) {
+      if (pt.state === 'parked') {
+        pt.state    = 'lane';
+        pt.progress = (pt.x - pt.xShufEnd) / (pt.xLaneEnd - pt.xShufEnd);
+        pt.progress = Math.max(0, Math.min(0.99, pt.progress));
+      }
+    }
+    laneParkedCounts = {};
+  }
+});
+
+const speedSlider = document.getElementById('speed-slider');
+speedSlider.addEventListener('input', () => {
+  speedMult = parseFloat(speedSlider.value);
+  document.getElementById('speed-label').textContent = speedMult.toFixed(1) + '×';
+});
+
+document.getElementById('limit-select').addEventListener('change', () => { resetSim(); hideModal(); });
+
+// ── Simulation state ─────────────────────────────────────────────────────────
+let simParticles  = [];
+let simQueue      = [];
+let simReducer    = {}; 
+let simRecent     = []; 
+let simMapped     = 0;
+let simReduced    = 0;
+let emitTimer     = 0;
+const EMIT_MS     = 100; // Faster for the big dataset
+
+function resetSim() {
+  simParticles      = [];
+  simReducer        = {};
+  simRecent         = [];
+  simMapped         = 0;
+  simReduced        = 0;
+  emitTimer         = 0;
+  laneParkedCounts  = {};
+
+  let pool = ALL_WORDS.filter(w => {
+    if (filterMode === 'all') return true;
+    if (filterMode === 'shared') return w.s === 'sh';
+    if (filterMode === 'mauk_only') return w.s === 'mo';
+    if (filterMode === 'abaci_only') return w.s === 'ao';
+    return true;
+  });
+  
+  // Apply limit
+  const limit = document.getElementById('limit-select').value;
+  if (limit !== 'all') {
+    pool = pool.slice(0, parseInt(limit));
+  }
+  
+  // Random shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  simQueue = pool;
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-mapped').textContent  = simMapped.toLocaleString();
+  document.getElementById('stat-reduced').textContent = simReduced.toLocaleString();
+  document.getElementById('stat-queue').textContent   = simQueue.length.toLocaleString();
+}
+
+function showModal() {
+  const content = `
+    <div>Jaccard: <b>${(STATS.jaccard*100).toFixed(2)}%</b></div>
+    <div>Total unique: <b>${STATS.total_unique.toLocaleString()}</b></div>
+    <div>MAUK vocab: <b>${STATS.mauk_vocab.toLocaleString()}</b></div>
+    <div>ABACI vocab: <b>${STATS.abaci_vocab.toLocaleString()}</b></div>
+    <div>Shared: <b>${STATS.shared.toLocaleString()}</b></div>
+    <div>MAUK-only: <b>${STATS.mauk_only.toLocaleString()}</b></div>
+    <div>ABACI-only: <b>${STATS.abaci_only.toLocaleString()}</b></div>
+  `;
+  document.getElementById('modal-stats-content').innerHTML = content;
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function hideModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+// ── p5.js sketch ─────────────────────────────────────────────────────────────
+const sketch = (p) => {
+  const C_BG       = [8,   12,  10 ];
+  const C_ZONE     = [12,  18,  15 ];
+  const C_LANE     = [18,  25,  22 ];
+  const C_DIVIDER  = [33,  38,  45 ];
+  const C_MAUK     = [3,   166, 161];
+  const C_ABACI    = [255, 157, 35 ];
+  const C_SHARED   = [201, 51,  62 ]; 
+  const C_EQUAL    = [201, 51,  62 ]; 
+  const C_TEXT_DIM = [201, 51,  62 ];
+  const C_TEXT     = [200, 205, 220];
+
+  let W, H;
+  let INPUT_W, MAP_W, SHUF_X, SHUF_W, RED_X, RED_W;
+  let LANE_TOP, LANE_BTM, LANE_H;
+  let MAUK_Y, ABACI_Y;
+  const LANES = 26;
+
+  const smoothstep = t => t * t * (3 - 2 * t);
+  const lerp       = (a, b, t) => a + (b - a) * t;
+
+  function laneY(letter) {
+    const idx = Math.max(0, Math.min(25, letter.charCodeAt(0) - 97));
+    return LANE_TOP + idx * LANE_H + LANE_H * 0.5;
+  }
+
+  function dominantColor(mauk, abaci) {
+    if (mauk > 0 && abaci > 0) {
+      if (mauk > abaci)  return C_MAUK;
+      if (abaci > mauk)  return C_ABACI;
+      return C_EQUAL;
+    }
+    return mauk > 0 ? C_MAUK : C_ABACI;
+  }
+
+  function computeLayout() {
+    W = p.width; H = p.height;
+    INPUT_W = Math.min(130, W * 0.09);
+    MAP_W   = Math.min(185, W * 0.13);
+    RED_W   = Math.min(305, W * 0.215);
+    SHUF_X  = INPUT_W + MAP_W;
+    SHUF_W  = W - INPUT_W - MAP_W - RED_W;
+    RED_X   = SHUF_X + SHUF_W;
+    LANE_TOP = 52;
+    LANE_BTM = H - 14;
+    LANE_H   = (LANE_BTM - LANE_TOP) / LANES;
+    MAUK_Y   = H * 0.30;
+    ABACI_Y  = H * 0.70;
+  }
+
+  class Particle {
+    constructor(word, src, m_cnt, a_cnt) {
+      this.word       = word.length > 13 ? word.slice(0, 12) + '…' : word;
+      this.fullWord   = word;
+      this.src        = src; 
+      this.m_cnt      = m_cnt;
+      this.a_cnt      = a_cnt;
+      this.col        = src === 'mauk' ? C_MAUK : C_ABACI;
+
+      this.x  = SHUF_X;
+      this.y  = src === 'mauk' ? MAUK_Y : ABACI_Y;
+      this.sy = this.y;
+      this.ty = laneY(word[0]);
+
+      this.state    = 'emit';
+      this.progress = 0;
+      this.alpha    = 0;
+
+      this.xEmitEnd   = SHUF_X + SHUF_W * 0.12;
+      this.xShufEnd   = SHUF_X + SHUF_W * 0.38;
+      this.xLaneEnd   = RED_X  - 4;
+
+      this.slot  = 0;
+      this.parkX = this.xShufEnd + SHUF_W * 0.10;
+    }
+
+    update(dt) {
+      const spd = 0.00095 * dt;
+      switch (this.state) {
+        case 'emit':
+          this.progress += spd * 3.2;
+          this.x     = lerp(SHUF_X, this.xEmitEnd, smoothstep(Math.min(this.progress, 1)));
+          this.alpha = Math.min(255, this.progress * 900);
+          if (this.progress >= 1) { this.state = 'shuffle'; this.progress = 0; }
+          break;
+        case 'shuffle':
+          this.progress += spd * 1.6;
+          this.x = lerp(this.xEmitEnd, this.xShufEnd, this.progress);
+          this.y = lerp(this.sy, this.ty, smoothstep(Math.min(this.progress, 1)));
+          if (this.progress >= 1) { this.state = 'lane'; this.progress = 0; }
+          break;
+        case 'lane':
+          this.progress += spd * 1.1;
+          this.x = lerp(this.xShufEnd, this.xLaneEnd, smoothstep(Math.min(this.progress, 1)));
+          if (bucketMode && this.progress >= 0.22) {
+            this.state = 'parked';
+            const letter = this.fullWord[0];
+            if (!laneParkedCounts[letter]) laneParkedCounts[letter] = 0;
+            this.slot  = laneParkedCounts[letter]++;
+            this.progress = 0;
+          } else if (this.progress >= 1) {
+            this.state = 'reduce'; this.progress = 0;
+          }
+          break;
+        case 'parked':
+          const targetX = this.parkX + Math.min(this.slot * 4, SHUF_W * 0.45);
+          this.x = lerp(this.x, targetX, 0.08);
+          if (!bucketMode) {
+            this.state = 'lane';
+            this.progress = Math.max(0, (this.x - this.xShufEnd) / (this.xLaneEnd - this.xShufEnd));
+          }
+          break;
+        case 'reduce':
+          this.progress += spd * 6;
+          this.alpha = lerp(255, 0, this.progress);
+          if (this.progress >= 1) {
+            this.state = 'done';
+            this._onReduce();
+          }
+          break;
+      }
+    }
+
+    _onReduce() {
+      const w = this.fullWord;
+      const isFirst = !simReducer[w];
+      if (isFirst) {
+        simReducer[w] = { mauk: 0, abaci: 0, flash: 60 };
+      }
+      if (this.src === 'mauk') simReducer[w].mauk += this.m_cnt;
+      else simReducer[w].abaci += this.a_cnt;
+      
+      simRecent = simRecent.filter(r => r.word !== w);
+      simRecent.unshift({ word: w, flash: 1.0, ...simReducer[w] });
+      if (simRecent.length > 28) simRecent.pop();
+
+      if (isFirst) simReduced++;
+      updateStats();
+    }
+
+    draw() {
+      if (this.alpha <= 0) return;
+      p.push();
+      const [r, g, b] = this.col;
+      p.textFont('monospace');
+      p.textSize(9.5);
+      const label = `${this.word} (1)`;
+      const tw = p.textWidth(label);
+      const pw = tw + 14, ph = 18;
+      p.noStroke();
+      p.fill(r, g, b, this.alpha * 0.22);
+      p.rect(this.x - pw / 2, this.y - ph / 2, pw, ph, 9);
+      p.noFill();
+      p.stroke(r, g, b, this.alpha * 0.7);
+      p.rect(this.x - pw / 2, this.y - ph / 2, pw, ph, 9);
+      p.noStroke();
+      p.fill(r, g, b, this.alpha);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text(label, this.x, this.y);
+      p.pop();
+    }
+  }
+
+  function emitWord(entry) {
+    if (entry.s === 'sh') {
+      simParticles.push(new Particle(entry.w, 'mauk', entry.m, entry.a));
+      simParticles.push(new Particle(entry.w, 'abaci', entry.m, entry.a));
+      simMapped += 2;
+    } else {
+      const src = entry.s === 'mo' ? 'mauk' : 'abaci';
+      simParticles.push(new Particle(entry.w, src, entry.m, entry.a));
+      simMapped += 1;
+    }
+    updateStats();
+  }
+
+  p.setup = () => {
+    const cnv = p.createCanvas(p.windowWidth, p.windowHeight - 50);
+    cnv.parent('canvas-container');
+    computeLayout();
+    loadData();
+  };
+
+  p.windowResized = () => {
+    p.resizeCanvas(p.windowWidth, p.windowHeight - 50);
+    computeLayout();
+  };
+
+  p.draw = () => {
+    p.background(...C_BG);
+    if (!paused && ALL_WORDS.length > 0) {
+      emitTimer += p.deltaTime * speedMult;
+      while (emitTimer >= EMIT_MS && simQueue.length > 0) {
+        emitTimer -= EMIT_MS;
+        emitWord(simQueue.shift());
+      }
+      for (const pt of simParticles) pt.update(p.deltaTime * speedMult);
+      simParticles = simParticles.filter(pt => pt.state !== 'done');
+      
+      if (simQueue.length === 0 && simParticles.length === 0 && simReduced > 0 && document.getElementById('modal-overlay').style.display === 'none') {
+        showModal();
+      }
+    }
+
+    // Drawing
+    p.noStroke();
+    p.fill(10, 15, 12); p.rect(0, 0, INPUT_W, H);
+    p.fill(...C_ZONE); p.rect(INPUT_W, 0, MAP_W, H);
+    p.fill(...C_BG); p.rect(SHUF_X, 0, SHUF_W, H);
+    p.fill(...C_ZONE); p.rect(RED_X, 0, RED_W, H);
+    
+    p.stroke(...C_DIVIDER);
+    p.line(INPUT_W, 0, INPUT_W, H); p.line(SHUF_X, 0, SHUF_X, H); p.line(RED_X, 0, RED_X, H);
+
+    p.noStroke(); p.fill(...C_TEXT_DIM); p.textAlign(p.CENTER, p.TOP); p.textSize(9);
+    p.text('INPUT', INPUT_W/2, 8);
+    p.text('MAP', INPUT_W + MAP_W/2, 8);
+    p.text('SHUFFLE', SHUF_X + SHUF_W/2, 8);
+    p.text('REDUCE', RED_X + RED_W/2, 8);
+
+    // Lanes
+    for (let i = 0; i < LANES; i++) {
+      const y = LANE_TOP + i * LANE_H;
+      p.stroke(...C_LANE); p.line(SHUF_X, y, RED_X, y);
+      p.noStroke(); p.fill(...C_TEXT_DIM); p.text(String.fromCharCode(65+i), SHUF_X+10, y+LANE_H/2);
+    }
+
+    // Input node
+    const [ir, ig, ib] = [230, 57, 70];
+    p.fill(ir, ig, ib, 30); p.stroke(ir, ig, ib, 150);
+    p.rect(INPUT_W/2-30, H/2-40, 60, 80, 10);
+    p.noStroke(); p.fill(ir, ig, ib); p.textAlign(p.CENTER, p.CENTER);
+    p.text('Supabase\nDB', INPUT_W/2, H/2);
+
+    // Mappers
+    [{l:'MAUK',y:MAUK_Y,c:C_MAUK},{l:'ABACI',y:ABACI_Y,c:C_ABACI}].forEach(m => {
+      p.fill(...m.c, 40); p.stroke(...m.c, 180);
+      p.rect(INPUT_W+10, m.y-25, MAP_W-20, 50, 8);
+      p.noStroke(); p.fill(...m.c); p.text(m.l, INPUT_W+MAP_W/2, m.y);
+    });
+
+    simParticles.forEach(pt => pt.draw());
+
+    // Reducer list
+    p.textAlign(p.LEFT, p.TOP); p.fill(...C_TEXT_DIM);
+    p.text('word', RED_X+10, 30); 
+    p.textAlign(p.RIGHT); 
+    p.text('M', RED_X+RED_W-45, 30); 
+    p.text('A', RED_X+RED_W-15, 30);
+    simRecent.forEach((r, i) => {
+      const y = 50 + i * 20;
+      const col = dominantColor(r.mauk, r.abaci);
+      p.fill(...col); p.textAlign(p.LEFT); p.text(r.word, RED_X+15, y);
+      
+      p.textAlign(p.RIGHT);
+      p.fill(...C_ABACI); p.text(r.abaci, RED_X+RED_W-15, y);
+      p.fill(...C_MAUK); p.text(r.mauk, RED_X+RED_W-45, y);
+    });
+  };
+};
+
+new p5(sketch, 'canvas-container');
+</script>
+</body>
+</html>

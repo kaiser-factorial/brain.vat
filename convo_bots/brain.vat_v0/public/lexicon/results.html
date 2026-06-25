@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results — Bot Lexicon</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    .btn {
+      background: #21262D;
+      border: 1px solid #30363D;
+      color: #C8CBD8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover {
+      background: #2D333B;
+      border-color: #444C56;
+    }
+
+    .btn-vat {
+      position: fixed;
+      top: 10px;
+      right: 24px;
+      z-index: 5000;
+      background: rgba(230, 57, 70, 0.1);
+      color: #FF5C67;
+      border: 1px solid #C9333E;
+      font-weight: 700;
+      box-shadow: 0 0 15px rgba(230, 57, 70, 0.2);
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 6px;
+      padding: 6px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-vat:hover {
+      background: rgba(230, 57, 70, 0.2);
+      color: #FF8089;
+      transform: scale(1.02);
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.4);
+    }
+
+    body {
+      background: #080c0a;
+      color: #C8CBD8;
+      font-family: 'JetBrains Mono', monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: #0a120d;
+      border-bottom: 1px solid #21262D;
+      flex-shrink: 0;
+    }
+
+    #header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #E6EDF3;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .back-btn {
+      color: #00E678;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .back-btn:hover {
+      text-decoration: underline;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      overflow: hidden;
+    }
+
+    /* Left Column: Charts */
+    #sidebar {
+      width: 380px;
+      background: #0a120d;
+      border-right: 1px solid #21262D;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      overflow-y: auto;
+    }
+
+    /* Collapsible Charts */
+    details.chart-box {
+      border-bottom: 1px solid #21262D;
+      padding-bottom: 16px;
+    }
+
+    details.chart-box summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      padding: 4px 0;
+      user-select: none;
+      outline: none;
+    }
+
+    details.chart-box summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.chart-box summary::before {
+      content: '▶';
+      font-size: 8px;
+      transition: transform 0.2s;
+      color: #C9333E;
+    }
+
+    details[open].chart-box summary::before {
+      transform: rotate(90deg);
+    }
+
+    details[open].chart-box summary {
+      margin-bottom: 16px;
+    }
+
+    details.chart-box.mauk summary::before { color: #03A6A1; }
+    details.chart-box.abaci summary::before { color: #FF9D23; }
+    details.chart-box.shared summary::before { color: #C9333E; }
+
+    .title-mauk {
+      color: #03A6A1 !important;
+    }
+
+    .title-abaci {
+      color: #FF9D23 !important;
+    }
+
+    .title-both {
+      color: #C9333E !important;
+    }
+
+    .chart-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 18px;
+    }
+
+    .bar-label {
+      width: 60px;
+      font-size: 10px;
+      color: #8B949E;
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .bar-wrap {
+      flex: 1;
+      background: #161B22;
+      height: 12px;
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      transition: width 0.6s ease-out;
+    }
+
+    .bar-mauk {
+      background: #03A6A1;
+    }
+
+    .bar-abaci {
+      background: #FF9D23;
+    }
+
+    .bar-both {
+      background: #C9333E;
+    }
+
+    .bar-val {
+      font-size: 9px;
+      color: #C8CBD8;
+      width: 40px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Right Column: Word List */
+    /* Right Area: 3 Columns */
+    #content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background: #21262D;
+      overflow: hidden;
+      gap: 1px;
+    }
+
+    .word-column {
+      display: flex;
+      flex-direction: column;
+      background: #080c0a;
+      overflow: hidden;
+    }
+
+    .col-header {
+      padding: 14px 20px;
+      background: #0a120d;
+      border-bottom: 1px solid #21262D;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .col-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .col-toggle {
+      font-size: 9px;
+      text-transform: none;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0;
+      font-weight: 500;
+      color: #8B949E;
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    .col-toggle:hover {
+      color: #C8CBD8;
+    }
+
+    .col-toggle.active {
+      color: #C9333E;
+    }
+
+    .col-count {
+      font-size: 10px;
+      color: #8B949E;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .col-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .word-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 20px;
+      border-bottom: 1px solid #21262D;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .word-row:hover {
+      background: #1C2128;
+    }
+
+    .word-text {
+      font-family: 'JetBrains Mono', monospace;
+      color: #E6EDF3;
+    }
+
+    .word-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #8B949E;
+    }
+
+    .title-mauk {
+      color: #03A6A1;
+    }
+
+    .title-abaci {
+      color: #FF9D23;
+    }
+
+    .title-both {
+      color: #C9333E;
+    }
+
+    #list-header-global {
+      background: #0a120d;
+      padding: 12px 24px;
+      border-bottom: 1px solid #21262D;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #stats-summary {
+      font-size: 12px;
+      color: #8B949E;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #30363D;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #444C56;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="header">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <a href="/lexicon/index.html" class="back-btn">← Back to Visualizer</a>
+      <h1><span class="title-mauk">MAUK</span> × <span class="title-abaci">ABACI</span> Lexicon Results</h1>
+      <div id="stats-summary" style="margin-left: 8px; border-left: 1px solid #30363D; padding-left: 20px;">
+        Jaccard: <b id="jaccard-val">0%</b> <span style="font-size:10px; opacity:0.6; margin-left:8px;">(as of May 10, 2026)</span>
+      </div>
+    </div>
+    <button class="btn btn-vat" onclick="window.location.href='/'">Enter the VAT</button>
+  </div>
+
+  <main>
+    <div id="sidebar">
+      <details class="chart-box mauk">
+        <summary class="title-mauk">MAUK Distribution</summary>
+        <div class="chart-container" id="chart-mauk"></div>
+      </details>
+      <details class="chart-box abaci">
+        <summary class="title-abaci">ABACI Distribution</summary>
+        <div class="chart-container" id="chart-abaci"></div>
+      </details>
+      <details class="chart-box shared">
+        <summary class="title-both">SHARED <span style="color:#C9333E">(BOTH)</span> Distribution</summary>
+        <div class="chart-container" id="chart-both"></div>
+      </details>
+    </div>
+
+    <div id="content-wrap" style="display:flex; flex-direction:column; overflow:hidden;">
+      <div id="list-header-global">
+        <div style="font-size:12px; color:#8B949E;">
+          Top 1,000 words per speaker (stop words excluded)
+        </div>
+        <input type="text" id="search-box" placeholder="Search vocabulary..."
+          style="background:#0D1117; border:1px solid #30363D; color:#E6EDF3; padding:6px 12px; border-radius:6px; font-size:13px; width:240px; outline:none;">
+      </div>
+
+      <div id="content">
+        <div class="word-column" id="col-mauk">
+          <div class="col-header">
+            <div class="col-title title-mauk">
+              <span id="title-text-mauk">MAUK <span style="color:#E63946">ONLY</span></span>
+              <button class="col-toggle" id="toggle-mauk" onclick="toggleMode('mauk')">Show Full</button>
+            </div>
+            <span class="col-count" id="count-mauk">0</span>
+          </div>
+          <div class="col-list" id="list-mauk"></div>
+        </div>
+        <div class="word-column" id="col-both">
+          <div class="col-header">
+            <span class="col-title title-both">SHARED <span style="color:#E63946">(BOTH)</span></span>
+            <span class="col-count" id="count-both">0</span>
+          </div>
+          <div class="col-list" id="list-both"></div>
+        </div>
+        <div class="word-column" id="col-abaci">
+          <div class="col-header">
+            <div class="col-title title-abaci">
+              <span id="title-text-abaci">ABACI <span style="color:#E63946">ONLY</span></span>
+              <button class="col-toggle" id="toggle-abaci" onclick="toggleMode('abaci')">Show Full</button>
+            </div>
+            <span class="col-count" id="count-abaci">0</span>
+          </div>
+          <div class="col-list" id="list-abaci"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let ALL_WORDS = [];
+    let STATS = {};
+
+    async function loadData() {
+      const [wRes, sRes] = await Promise.all([
+        fetch('words.json'),
+        fetch('stats.json')
+      ]);
+      ALL_WORDS = await wRes.json();
+      STATS = await sRes.json();
+
+      renderResults();
+    }
+
+    function renderResults() {
+      document.getElementById('jaccard-val').textContent = (STATS.jaccard * 100).toFixed(2) + '%';
+
+      renderChart('chart-mauk', STATS.distributions.mauk, 'bar-mauk');
+      renderChart('chart-both', STATS.distributions.both, 'bar-both');
+      renderChart('chart-abaci', STATS.distributions.abaci, 'bar-abaci');
+
+      updateWordList();
+    }
+
+    function renderChart(id, data, cls) {
+      const container = document.getElementById(id);
+      const max = Math.max(...data.map(d => d.unique));
+
+      container.innerHTML = data.map(d => {
+        const pct = (d.unique / max) * 100;
+        return `
+      <div class="bar-row">
+        <div class="bar-label">${d.label}</div>
+        <div class="bar-wrap">
+          <div class="bar-fill ${cls}" style="width: ${pct}%"></div>
+        </div>
+        <div class="bar-val">${d.unique.toLocaleString()}</div>
+      </div>
+    `;
+      }).join('');
+    }
+
+    let modeMauk = 'only';
+    let modeAbaci = 'only';
+
+    function toggleMode(bot) {
+      if (bot === 'mauk') {
+        modeMauk = modeMauk === 'only' ? 'full' : 'only';
+        document.getElementById('toggle-mauk').textContent = modeMauk === 'only' ? 'Show Full' : 'Show Only';
+        document.getElementById('title-text-mauk').innerHTML = modeMauk === 'only' ? 'MAUK <span style="color:#E63946">ONLY</span>' : 'MAUK FULL';
+      } else {
+        modeAbaci = modeAbaci === 'only' ? 'full' : 'only';
+        document.getElementById('toggle-abaci').textContent = modeAbaci === 'only' ? 'Show Full' : 'Show Only';
+        document.getElementById('title-text-abaci').innerHTML = modeAbaci === 'only' ? 'ABACI <span style="color:#E63946">ONLY</span>' : 'ABACI FULL';
+      }
+      updateWordList(document.getElementById('search-box').value);
+    }
+
+    function updateWordList(filter = '') {
+      const search = filter.toLowerCase();
+
+      const maukList = document.getElementById('list-mauk');
+      const bothList = document.getElementById('list-both');
+      const abaciList = document.getElementById('list-abaci');
+
+      const filterAndSort = (type, mode) => {
+        let pool;
+        if (type === 'mo') {
+          pool = mode === 'only' ? ALL_WORDS.filter(w => w.s === 'mo') : ALL_WORDS.filter(w => w.s === 'mo' || w.s === 'sh');
+          pool.sort((a, b) => b.m - a.m);
+        } else if (type === 'ao') {
+          pool = mode === 'only' ? ALL_WORDS.filter(w => w.s === 'ao') : ALL_WORDS.filter(w => w.s === 'ao' || w.s === 'sh');
+          pool.sort((a, b) => b.a - a.a);
+        } else {
+          pool = ALL_WORDS.filter(w => w.s === 'sh');
+          pool.sort((a, b) => (b.m + b.a) - (a.m + a.a));
+        }
+
+        if (search) pool = pool.filter(w => w.w.includes(search));
+        return pool;
+      };
+
+      const mPool = filterAndSort('mo', modeMauk);
+      const bPool = filterAndSort('sh');
+      const aPool = filterAndSort('ao', modeAbaci);
+
+      document.getElementById('count-mauk').textContent = mPool.length.toLocaleString();
+      document.getElementById('count-both').textContent = bPool.length.toLocaleString();
+      document.getElementById('count-abaci').textContent = aPool.length.toLocaleString();
+
+      const limit = 1000;
+
+      maukList.innerHTML = mPool.slice(0, limit).map(w => `
+    <div class="word-row">
+      <span class="word-text">${w.w}</span>
+      <span class="word-val">${w.m.toLocaleString()}</span>
+    </div>
+  `).join('');
+
+      bothList.innerHTML = bPool.slice(0, limit).map(w => `
+    <div class="word-row">
+      <span class="word-text">${w.w}</span>
+      <span class="word-val">
+        <span class="title-mauk">M:${w.m}</span> 
+        <span class="title-abaci">A:${w.a}</span>
+      </span>
+    </div>
+  `).join('');
+
+      abaciList.innerHTML = aPool.slice(0, limit).map(w => `
+    <div class="word-row">
+      <span class="word-text">${w.w}</span>
+      <span class="word-val">${w.a.toLocaleString()}</span>
+    </div>
+  `).join('');
+    }
+
+    document.getElementById('search-box').addEventListener('input', (e) => {
+      updateWordList(e.target.value);
+    });
+
+    loadData();
+  </script>
+</body>
+
+</html>

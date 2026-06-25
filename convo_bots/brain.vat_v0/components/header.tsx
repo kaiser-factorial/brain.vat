@@ -120,6 +120,7 @@ export function Header({ onAuthClick }: HeaderProps) {
               <CyberButtonGroup cornerSize={6}>
                 <NavLink href="/about">about</NavLink>
                 <NavLink href="/archive">archive</NavLink>
+                <NavLink onClick={() => { window.location.href = '/lexicon/index.html' }}>lexicon</NavLink>
                 {user?.email === 'kaiser.factorial@gmail.com' && (
                   <NavLink href="/admin">control</NavLink>
                 )}
