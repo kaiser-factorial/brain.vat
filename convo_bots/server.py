@@ -17,6 +17,7 @@ import math
 import random
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
+from markupsafe import escape
 from dotenv import load_dotenv
 from collections import deque
 import requests
@@ -493,6 +494,63 @@ def generate_response(bot: str, history: list[dict]) -> str:
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Admin-Secret", "Cache-Control"])
+
+# Matches brain.vat_v0/app/globals.css (--mauk, --abaci)
+SPEAKER_COLORS = {
+    BOT_A_NAME: "#03A6A1",  # MAUK cool cyan
+    BOT_B_NAME: "#FF9D23",  # ABACI warm orange
+    BOT_C_NAME: "#facc15",
+    BOT_D_NAME: "#38bdf8",
+}
+
+@app.route("/")
+def index():
+    messages = []
+    if SUPABASE_UTILS_AVAILABLE and sb_client:
+        try:
+            res = sb_client.table("messages").select("speaker, text, created_at").order("created_at", desc=True).limit(20).execute()
+            messages = res.data or []
+        except Exception as e:
+            logging.error(f"Failed to fetch messages for index: {e}")
+
+    rows = []
+    for m in messages:
+        speaker = m.get("speaker") or "?"
+        ts = (m.get("created_at") or "")[:19].replace("T", " ")
+        color = SPEAKER_COLORS.get(speaker, "#e5e5e5")
+        rows.append(
+            f'<div class="msg"><span class="ts">{escape(ts)}</span>'
+            f'<span class="speaker" style="color:{color}">[{escape(speaker)}]</span>'
+            f'<span class="text">{escape(m.get("text") or "")}</span></div>'
+        )
+    feed = "\n".join(rows) or '<div class="msg empty">(no messages yet)</div>'
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>brain.vat — inference backend</title>
+<style>
+  body {{ background: #0a0a0f; color: #e5e5e5; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+         max-width: 720px; margin: 2rem auto; padding: 0 1rem; font-size: 14px; }}
+  h1 {{ font-size: 1rem; color: #03A6A1; letter-spacing: 0.15em; }}
+  h1 span {{ color: #FF9D23; }}
+  .status {{ color: #6b7280; margin-bottom: 1.5rem; }}
+  .status a {{ color: #818cf8; }}
+  .msg {{ padding: 0.4rem 0; border-bottom: 1px solid #1f1f2e; line-height: 1.5; }}
+  .ts {{ color: #6b7280; margin-right: 0.6em; font-size: 12px; }}
+  .ts::after {{ content: " UTC"; }}
+  .speaker {{ font-weight: bold; margin-right: 0.5em; }}
+  .empty {{ color: #6b7280; }}
+</style>
+</head>
+<body>
+<h1>brain.vat <span>∎</span> MAUK ∩ ABACI</h1>
+<div class="status">status: online — last {len(messages)} messages, newest first — <a href="/api/status">/api/status</a></div>
+{feed}
+</body>
+</html>"""
 
 @app.route("/api/status")
 def get_status():
